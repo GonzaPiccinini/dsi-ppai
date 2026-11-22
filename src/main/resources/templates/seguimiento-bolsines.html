@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Seguimiento de Bolsines</title>
+    <style>
+        :root {
+            color-scheme: light dark;
+            --bg: #f4f6f8;
+            --card-bg: #ffffff;
+            --border: #dfe3e8;
+            --text: #1f2933;
+            --muted: #616e7c;
+            --accent: #2f6feb;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 2rem;
+        }
+
+        h1 {
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.25rem;
+            max-width: 960px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1.25rem 1.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+        }
+
+        .card h2 {
+            margin: 0 0 1rem 0;
+            font-size: 1.05rem;
+            color: var(--accent);
+        }
+
+        .card dl {
+            margin: 0;
+        }
+
+        .card dt {
+            font-size: 0.8rem;
+            color: var(--muted);
+            margin-top: 0.6rem;
+        }
+
+        .card dt:first-of-type {
+            margin-top: 0;
+        }
+
+        .card dd {
+            margin: 0;
+            font-size: 1rem;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #e8f0fe;
+            color: var(--accent);
+            border-radius: 999px;
+            padding: 0.15rem 0.6rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .filtros {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .filtros label {
+            font-size: 0.9rem;
+            color: var(--muted);
+        }
+
+        .filtros select {
+            padding: 0.4rem 0.6rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.95rem;
+            min-width: 240px;
+        }
+
+        .confirmacion-email {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .confirmacion-email p {
+            margin: 0 0 0.75rem 0;
+        }
+
+        .confirmacion-email button {
+            padding: 0.4rem 1rem;
+            margin-right: 0.5rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--card-bg);
+            color: var(--text);
+            font-size: 0.95rem;
+            cursor: pointer;
+        }
+
+        .confirmacion-email button[value="true"] {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #ffffff;
+        }
+
+        .alerta {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1rem;
+            padding: 0.9rem 1rem;
+            border: 1px solid;
+            border-left-width: 4px;
+            border-radius: 8px;
+        }
+
+        .alerta-icono {
+            flex: 0 0 auto;
+            width: 1.6rem;
+            height: 1.6rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: #ffffff;
+        }
+
+        .alerta-contenido p {
+            margin: 0;
+        }
+
+        .alerta-titulo {
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+
+        .alerta-detalle {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 0.25rem 0.75rem;
+            margin: 0.75rem 0 0 0;
+            font-size: 0.9rem;
+        }
+
+        .card .alerta-detalle dt,
+        .card .alerta-detalle dt:first-of-type {
+            margin: 0;
+        }
+
+        .card .alerta-detalle dd {
+            font-size: 0.9rem;
+            word-break: break-all;
+        }
+
+        .alerta-exito {
+            background: rgba(26, 127, 55, 0.08);
+            border-color: rgba(26, 127, 55, 0.35);
+            border-left-color: #1a7f37;
+        }
+
+        .alerta-exito .alerta-icono,
+        .alerta-exito .alerta-titulo {
+            color: #1a7f37;
+        }
+
+        .alerta-exito .alerta-icono {
+            background: #1a7f37;
+            color: #ffffff;
+        }
+
+        .alerta-error {
+            background: rgba(207, 34, 46, 0.08);
+            border-color: rgba(207, 34, 46, 0.35);
+            border-left-color: #cf222e;
+        }
+
+        .alerta-error .alerta-titulo {
+            color: #cf222e;
+        }
+
+        .alerta-error .alerta-icono {
+            background: #cf222e;
+        }
+
+        .alerta-info {
+            background: rgba(97, 110, 124, 0.08);
+            border-color: rgba(97, 110, 124, 0.35);
+            border-left-color: var(--muted);
+            color: var(--muted);
+        }
+
+        .alerta-info .alerta-icono {
+            background: var(--muted);
+        }
+
+        .empty-state {
+            background: var(--card-bg);
+            border: 1px dashed var(--border);
+            border-radius: 10px;
+            padding: 1.5rem;
+            max-width: 480px;
+            color: var(--muted);
+        }
+    </style>
+</head>
+<body>
+    <h1>Seguimiento de Bolsines</h1>
+
+    <div th:if="${empleado == null}" class="empty-state">
+        No se encontro un empleado asociado al usuario logueado.
+    </div>
+
+    <div th:if="${empleado != null}" class="cards">
+        <div class="card">
+            <h2>Usuario</h2>
+            <dl>
+                <dt>Nombre</dt>
+                <dd th:text="${empleado.usuario != null ? empleado.usuario.nombre : '-'}">-</dd>
+            </dl>
+        </div>
+
+        <div class="card">
+            <h2>Empleado</h2>
+            <dl>
+                <dt>Nombre</dt>
+                <dd th:text="${empleado.nombre} + ' ' + ${empleado.apellido}">-</dd>
+                <dt>Email</dt>
+                <dd th:text="${empleado.email}">-</dd>
+                <dt>Rol</dt>
+                <dd>
+                    <span th:text="${empleado.rol != null ? empleado.rol.nombre : '-'}">-</span>
+                    <span class="badge" th:if="${empleado.sosGCM()}">GCM</span>
+                </dd>
+            </dl>
+        </div>
+
+        <div class="card" th:if="${empleado.CM != null}">
+            <h2>Comision Medica</h2>
+            <dl>
+                <dt>Nombre</dt>
+                <dd th:text="${empleado.CM.nombre}">-</dd>
+                <dt>Codigo</dt>
+                <dd th:text="${empleado.CM.codigo}">-</dd>
+                <dt>Direccion</dt>
+                <dd th:text="${empleado.CM.direccion}">-</dd>
+                <dt>Email</dt>
+                <dd th:text="${empleado.CM.email}">-</dd>
+                <dt>Telefono</dt>
+                <dd th:text="${empleado.CM.telefono}">-</dd>
+            </dl>
+        </div>
+
+        <div class="card" th:if="${empleado.CM == null}">
+            <h2>Comision Medica</h2>
+            <p>El empleado no tiene una Comision Medica asignada.</p>
+        </div>
+    </div>
+
+    <div th:if="${empleado != null}">
+        <h1 style="margin-top: 2rem;">Ubicacion de los bolsines</h1>
+
+        <div th:if="${cuCancelado}" class="alerta alerta-info" role="status">
+            <div class="alerta-icono" aria-hidden="true">i</div>
+            <div class="alerta-contenido">
+                <strong class="alerta-titulo">Consulta cancelada</strong>
+                <p>Se cancelo la consulta de seguimiento de bolsines. <a th:href="@{/}">Volver a consultar</a></p>
+            </div>
+        </div>
+
+        <div th:if="${noHayBolsinesEnviados and !cuCancelado}" class="empty-state">
+            No se encontraron bolsines en estado Enviado para la Comision Medica del usuario logueado.
+        </div>
+
+        <th:block th:if="${!cuCancelado and !noHayBolsinesEnviados}">
+        <form class="filtros" th:action="@{/filtro-bolsin}" method="get">
+            <label for="cm-destino">Comision Medica destino</label>
+            <select id="cm-destino" name="cmDestino" onchange="this.form.submit()">
+                <option value="">Todas</option>
+                <option th:each="cm : ${comisionesMedicasDestino}" th:value="${cm}" th:text="${cm}"
+                        th:selected="${cm == cmDestinoSeleccionada}">CM destino</option>
+            </select>
+
+            <label for="precinto">Numero de precinto</label>
+            <input id="precinto" name="precinto" type="text" list="precintos" autocomplete="off"
+                   th:value="${numeroPrecintoSeleccionado}" placeholder="Ingrese un numero de precinto">
+            <datalist id="precintos">
+                <option th:each="p : ${numerosPrecinto}" th:value="${p}"></option>
+            </datalist>
+            <button type="submit">Filtrar</button>
+        </form>
+
+        <div th:if="${precintoNoEncontrado != null}" class="alerta alerta-error" role="alert" style="margin-top: 1rem;">
+            <div class="alerta-icono" aria-hidden="true">!</div>
+            <div class="alerta-contenido">
+                <strong class="alerta-titulo">Precinto no encontrado</strong>
+                <p>No se encuentra bolsin con el numero de precinto ingresado:
+                    <span th:text="${precintoNoEncontrado}">P-000</span>.</p>
+            </div>
+        </div>
+
+        <div th:if="${!#lists.isEmpty(numerosBolsinSinUbicacion)}" class="alerta alerta-error" role="alert" style="margin-top: 1rem;">
+            <div class="alerta-icono" aria-hidden="true">!</div>
+            <div class="alerta-contenido">
+                <strong class="alerta-titulo">Ubicacion no disponible</strong>
+                <p>El GPS Tracker no pudo informar la ubicacion de los bolsines:
+                    <span th:text="${#strings.listJoin(numerosBolsinSinUbicacion, ', ')}">101</span>.</p>
+            </div>
+        </div>
+
+        <p th:if="${seleccionBolsinHabilitada and bolsinSeleccionado == null and !#strings.isEmpty(mapa)}"
+           style="color: var(--muted); margin-top: 1rem;">
+            Seleccione un bolsin en el mapa.
+        </p>
+
+        <div class="card" th:if="${bolsinSeleccionado != null}" style="max-width: 480px; margin-top: 1rem;">
+            <h2>Bolsin seleccionado</h2>
+            <dl>
+                <dt>Numero de bolsin</dt>
+                <dd th:text="${bolsinSeleccionado.numeroBolsin}">-</dd>
+                <dt>Numero de precinto</dt>
+                <dd th:text="${bolsinSeleccionado.numeroPrecinto}">-</dd>
+                <dt>Comision Medica destino</dt>
+                <dd th:text="${bolsinSeleccionado.cmDestino != null ? bolsinSeleccionado.cmDestino.nombre : '-'}">-</dd>
+            </dl>
+
+            <form th:if="${envioCorreoSolicitado}" class="confirmacion-email"
+                  th:action="@{/confirmacion-envio-email}" method="get">
+                <p>
+                    ¿Desea enviar un correo electronico al Gerente de la Comision Medica destino
+                    para informar la ubicacion del bolsin?
+                </p>
+                <button type="submit" name="confirmacion" value="true">Si</button>
+                <button type="submit" name="confirmacion" value="false">No</button>
+            </form>
+
+            <div th:if="${envioEmailConfirmado and ejecucionExitosaCU31}" class="alerta alerta-exito" role="status">
+                <div class="alerta-icono" aria-hidden="true">&#10003;</div>
+                <div class="alerta-contenido">
+                    <strong class="alerta-titulo">Correo enviado</strong>
+                    <p>
+                        Se notifico la ubicacion del bolsin
+                        <span th:text="${bolsinSeleccionado.numeroBolsin}">101</span>
+                        al Gerente de la Comision Medica destino.
+                    </p>
+                    <dl class="alerta-detalle">
+                        <dt>Destinatario</dt>
+                        <dd th:text="${emailGCMDestino}">gcm@bolsin.com</dd>
+                        <th:block th:if="${ubicacionNotificada != null}">
+                            <dt>Ultima actualizacion</dt>
+                            <dd th:text="${ubicacionNotificada.fechaHoraUltimaActualizacion != null
+                                    ? #temporals.format(ubicacionNotificada.fechaHoraUltimaActualizacion, 'dd/MM/yyyy HH:mm')
+                                    : '-'}">-</dd>
+                            <dt>Coordenadas</dt>
+                            <dd th:text="${ubicacionNotificada.latitud} + ', ' + ${ubicacionNotificada.longitud}">-</dd>
+                        </th:block>
+                    </dl>
+                </div>
+            </div>
+
+            <div th:if="${envioEmailConfirmado and emailGCMDestino != null and !ejecucionExitosaCU31}" class="alerta alerta-error" role="alert">
+                <div class="alerta-icono" aria-hidden="true">!</div>
+                <div class="alerta-contenido">
+                    <strong class="alerta-titulo">No se pudo enviar el correo</strong>
+                    <p>No se pudo notificar la ubicacion del bolsin al Gerente de la Comision Medica destino.</p>
+                </div>
+            </div>
+
+            <div th:if="${envioEmailConfirmado and emailGCMDestino == null}" class="alerta alerta-error" role="alert">
+                <div class="alerta-icono" aria-hidden="true">!</div>
+                <div class="alerta-contenido">
+                    <strong class="alerta-titulo">Gerente no encontrado</strong>
+                    <p>No se encontro un Gerente con correo electronico en la Comision Medica destino.</p>
+                </div>
+            </div>
+
+            <div th:if="${deseaEnviarEmail == false}" class="alerta alerta-info" role="status">
+                <div class="alerta-icono" aria-hidden="true">i</div>
+                <div class="alerta-contenido">
+                    <p>No se enviara el correo electronico.</p>
+                </div>
+            </div>
+        </div>
+
+        <div th:if="${#strings.isEmpty(mapa) and precintoNoEncontrado == null}" class="empty-state">
+            <span th:if="${cmDestinoSeleccionada != null or numeroPrecintoSeleccionado != null}">
+                Ningun bolsin con ubicacion informada coincide con los filtros seleccionados.
+            </span>
+            <span th:unless="${cmDestinoSeleccionada != null or numeroPrecintoSeleccionado != null}">
+                El GPS Tracker no informo ubicaciones para los bolsines enviados.
+            </span>
+        </div>
+
+        <div th:if="${!#strings.isEmpty(mapa)}" th:utext="${mapa}"></div>
+
+        <form th:action="@{/cancelar}" method="get" style="margin-top: 1.5rem;">
+            <button type="submit">Cancelar</button>
+        </form>
+        </th:block>
+    </div>
+</body>
+</html>

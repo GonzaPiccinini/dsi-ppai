@@ -1,0 +1,23 @@
+services:
+  mysql:
+    image: mysql:8
+    container_name: mysql8-bolsin
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-bolsin}
+      MYSQL_USER: ${DB_USER:-user}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    ports:
+      - "33060:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - bolsin-net
+
+volumes:
+  mysql_data:
+
+networks:
+  bolsin-net:
+    external: true
