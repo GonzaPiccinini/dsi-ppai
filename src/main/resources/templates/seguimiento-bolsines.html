@@ -1,6 +1,21 @@
 <!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <script>
+        // Si hay una posición de scroll guardada, oculta la página hasta restaurarla (evita el "salto").
+        // El temporizador es un respaldo para que nunca quede oculta.
+        try {
+            if (sessionStorage.getItem('seguimientoBolsines.scrollY') !== null) {
+                document.documentElement.classList.add('restaurando');
+                setTimeout(function () { document.documentElement.classList.remove('restaurando'); }, 1500);
+            }
+        } catch (e) {
+            // Storage unavailable: nada que restaurar.
+        }
+    </script>
+    <style>
+        html.restaurando body { visibility: hidden; }
+    </style>
     <meta charset="UTF-8">
     <title>Seguimiento de Bolsines</title>
     <style>
@@ -16,9 +31,17 @@
 
         body {
             font-family: 'Segoe UI', Arial, sans-serif;
-            background: var(--bg);
+            /* Manchas de color suaves detrás del vidrio para que se aprecie el desenfoque. */
+            background:
+                radial-gradient(55vw 50vh at 88% 18%, rgba(255, 150, 90, 0.30), transparent 65%),
+                radial-gradient(50vw 55vh at 8% 70%, rgba(90, 110, 255, 0.24), transparent 65%),
+                radial-gradient(45vw 40vh at 55% 105%, rgba(255, 120, 160, 0.18), transparent 65%),
+                var(--bg);
+            background-attachment: fixed;
             color: var(--text);
-            margin: 0;
+            /* Todo el contenido en una sola columna centrada. */
+            max-width: 1280px;
+            margin: 0 auto;
             padding: 2rem;
         }
 
@@ -27,25 +50,204 @@
             font-size: 1.5rem;
         }
 
+        .hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+            align-items: center;
+            gap: 2rem;
+            max-width: 1280px;
+            min-height: 60vh;
+            margin-bottom: 2rem;
+        }
+
+        .hero h1 {
+            margin: 0;
+            font-size: clamp(2.8rem, 6vw, 5rem);
+            line-height: 1.05;
+            letter-spacing: -0.02em;
+        }
+
+        .hero-descripcion {
+            margin: 1.5rem 0 0 0;
+            max-width: 34rem;
+            font-size: 1.05rem;
+            line-height: 1.65;
+            color: var(--muted);
+        }
+
+        /* ---------- Mapa en escala de grises y marcadores propios ---------- */
+        #mapa {
+            height: 520px !important;
+            max-width: none !important;
+            margin-top: 0 !important;
+            border: 1px solid rgba(255, 255, 255, 0.9) !important;
+            border-radius: 20px !important;
+            box-shadow: inset 0 0 0 1px rgba(40, 50, 120, 0.06);
+            background: #e9e9ea;
+        }
+
+        #mapa .leaflet-bar {
+            border: 0;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 6px 18px rgba(40, 50, 120, 0.2);
+        }
+
+        #mapa .leaflet-bar a {
+            background: rgba(255, 255, 255, 0.7);
+            -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(12px);
+            border-bottom-color: rgba(40, 50, 120, 0.1);
+        }
+
+        #mapa .leaflet-tile-pane {
+            filter: grayscale(1) contrast(0.92) brightness(1.06);
+        }
+
+        #mapa .leaflet-control-attribution {
+            display: none;
+        }
+
+        #mapa .leaflet-marker-shadow {
+            display: none;
+        }
+
+        #mapa .leaflet-marker-icon {
+            width: 44px !important;
+            height: 44px !important;
+            margin-left: -22px !important;
+            margin-top: -22px !important;
+            filter: drop-shadow(0 4px 6px rgba(20, 20, 60, 0.35));
+        }
+
+        #mapa .leaflet-popup-content-wrapper {
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.78);
+            -webkit-backdrop-filter: blur(14px);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.9);
+            box-shadow: 0 10px 28px rgba(40, 50, 120, 0.2);
+        }
+
+        #mapa .leaflet-popup-tip {
+            background: rgba(255, 255, 255, 0.85);
+        }
+
+        #mapa .leaflet-bar a {
+            color: var(--text);
+        }
+
+        .hero-imagen {
+            width: 100%;
+            height: auto;
+            max-height: 75vh;
+            object-fit: contain;
+            transform: scale(1.3);
+            /* Lleva el fondo beige de la foto a blanco puro para que "multiply" lo haga invisible. */
+            filter: brightness(1.1) contrast(1.06);
+            mix-blend-mode: multiply;
+            -webkit-mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 25%, transparent 88%);
+            mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 25%, transparent 88%);
+        }
+
+        /* La imagen escalada se desborda a propósito (bordes difuminados): se recorta en la página, no en la seccion. */
+        html, body {
+            overflow-x: hidden;
+        }
+
+        @media (max-width: 760px) {
+            .hero {
+                grid-template-columns: 1fr;
+                min-height: 0;
+            }
+        }
+
+        /* Grano de cine sobre el fondo de la página, con un movimiento muy leve. */
+        body::before {
+            content: "";
+            position: fixed;
+            top: -20px;
+            left: -20px;
+            right: -20px;
+            bottom: -20px;
+            z-index: -1;
+            pointer-events: none;
+            opacity: 0.85;
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/></svg>");
+            background-size: 220px 220px;
+            mix-blend-mode: multiply;
+            animation: grano-cine 2s steps(1) infinite;
+        }
+
+        @keyframes grano-cine {
+            0%   { transform: translate(0, 0); }
+            20%  { transform: translate(-6px, 4px); }
+            40%  { transform: translate(5px, -5px); }
+            60%  { transform: translate(-4px, -6px); }
+            80%  { transform: translate(6px, 3px); }
+            100% { transform: translate(0, 0); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            body::before {
+                animation: none;
+            }
+        }
+
         .cards {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 1.25rem;
-            max-width: 960px;
+            max-width: 1280px;
         }
 
+        /* Tarjetas "liquid glass": vidrio translúcido con desenfoque, borde de luz y brillo especular. */
         .card {
-            background: var(--card-bg);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 1.25rem 1.5rem;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+            position: relative;
+            overflow: hidden;
+            isolation: isolate;
+            min-height: 230px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.16));
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            backdrop-filter: blur(24px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.75);
+            border-radius: 24px;
+            padding: 1.4rem 1.6rem 1.6rem;
+            box-shadow:
+                0 12px 36px rgba(40, 50, 120, 0.14),
+                inset 0 1px 0 rgba(255, 255, 255, 0.95),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.35),
+                inset 0 0 28px rgba(255, 255, 255, 0.28);
+        }
+
+        .card::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            z-index: -1;
+            pointer-events: none;
+            background:
+                radial-gradient(120% 70% at 0% 0%, rgba(255, 255, 255, 0.65), transparent 55%),
+                radial-gradient(90% 60% at 100% 100%, rgba(255, 255, 255, 0.25), transparent 60%);
         }
 
         .card h2 {
-            margin: 0 0 1rem 0;
-            font-size: 1.05rem;
-            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            margin: 0 0 1.1rem 0;
+            font-size: 1.35rem;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            color: #1a2bd0;
+        }
+
+        .card h2::before {
+            content: "";
+            flex: 0 0 auto;
+            width: 26px;
+            height: 26px;
+            background: url("/img/icono-tarjeta.png") center / contain no-repeat;
         }
 
         .card dl {
@@ -69,34 +271,387 @@
 
         .badge {
             display: inline-block;
-            background: #e8f0fe;
-            color: var(--accent);
+            /* Azul profundo de las imágenes, color sólido. */
+            background: #1a2bd0;
+            color: #ffffff;
             border-radius: 999px;
             padding: 0.15rem 0.6rem;
             font-size: 0.75rem;
             font-weight: 600;
         }
 
+        /* Panel de filtros, campos y botones con el mismo vidrio de las tarjetas. */
         .filtros {
             display: flex;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 0.75rem;
-            margin-top: 1rem;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 1.4rem;
+            margin-top: 0;
+            padding: 2rem 2.2rem 2.2rem;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.16));
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            backdrop-filter: blur(24px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.75);
+            border-radius: 28px;
+            box-shadow:
+                0 12px 36px rgba(40, 50, 120, 0.12),
+                inset 0 1px 0 rgba(255, 255, 255, 0.95),
+                inset 0 0 28px rgba(255, 255, 255, 0.25);
+        }
+
+        .filtros form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.4rem;
+        }
+
+        .filtros > form + form {
+            margin-top: -0.7rem;
+        }
+
+        .filtros .campo {
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
         }
 
         .filtros label {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #1a2bd0;
+        }
+
+        .filtros button[type="submit"] {
+            align-self: stretch;
+            padding: 0.8rem 1.3rem;
+        }
+
+        .dd-vacio {
+            padding: 0.6rem 0.9rem;
             font-size: 0.9rem;
             color: var(--muted);
         }
 
-        .filtros select {
-            padding: 0.4rem 0.6rem;
-            border: 1px solid var(--border);
-            border-radius: 6px;
+        /* Encabezado de la sección: imagen del marcador, título grande y subtítulo. */
+        .encabezado-seccion {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin: 3rem 0 3.5rem;
+        }
+
+        .encabezado-icono {
+            flex: 0 0 auto;
+            width: clamp(240px, 32vw, 440px);
+            height: auto;
+            margin: -3rem -1rem 0 0;
+            filter: brightness(1.1) contrast(1.06);
+            mix-blend-mode: multiply;
+            -webkit-mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 45%, transparent 98%);
+            mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 45%, transparent 98%);
+        }
+
+        .titulo-seccion {
+            margin: 0;
+            font-size: clamp(2.2rem, 4.5vw, 3.6rem);
+            line-height: 1.05;
+            letter-spacing: -0.02em;
+        }
+
+        /* Título y subtítulo alineados a la derecha, con la imagen del marcador a la izquierda. */
+        .encabezado-seccion > div {
+            flex: 1;
+            text-align: right;
+        }
+
+        .subtitulo-seccion {
+            margin: 0.8rem 0 0 auto;
+            max-width: 36rem;
+            font-size: 1.05rem;
+            line-height: 1.6;
+            color: var(--muted);
+        }
+
+        /* Filtros a la izquierda y bolsín seleccionado a la derecha. */
+        .fila-filtro {
+            display: grid;
+            grid-template-columns: minmax(0, 480px) minmax(0, 1fr);
+            gap: 1.5rem;
+            align-items: stretch;
+        }
+
+        .fila-filtro .card-bolsin {
+            max-width: none;
+            margin: 0;
+        }
+
+        .card-vacia {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .card-vacia p {
+            margin: 0;
+            font-size: 1.25rem;
+            color: var(--muted);
+        }
+
+        @media (max-width: 860px) {
+            .fila-filtro {
+                grid-template-columns: 1fr;
+            }
+
+            .encabezado-seccion {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .encabezado-seccion > div {
+                text-align: left;
+            }
+
+            .subtitulo-seccion {
+                margin-left: 0;
+            }
+        }
+
+        /* Marco de vidrio alrededor del mapa. */
+        .mapa-vidrio {
+            margin-top: 1.5rem;
+            padding: 14px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.18));
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            backdrop-filter: blur(24px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            border-radius: 32px;
+            box-shadow:
+                0 16px 44px rgba(40, 50, 120, 0.16),
+                inset 0 1px 0 rgba(255, 255, 255, 0.95),
+                inset 0 0 30px rgba(255, 255, 255, 0.3);
+        }
+
+        .filtros select,
+        .filtros input[type="text"] {
+            padding: 0.75rem 1rem;
+            width: 100%;
+            box-sizing: border-box;
+            font: inherit;
             font-size: 0.95rem;
+            color: var(--text);
+            background: rgba(255, 255, 255, 0.5);
+            -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.85);
+            border-radius: 14px;
+            box-shadow: inset 0 1px 2px rgba(40, 50, 120, 0.08), 0 1px 0 rgba(255, 255, 255, 0.6);
+            outline: none;
             min-width: 240px;
         }
+
+        .filtros select:focus,
+        .filtros input[type="text"]:focus {
+            border-color: rgba(47, 111, 235, 0.65);
+            box-shadow: 0 0 0 3px rgba(47, 111, 235, 0.18), inset 0 1px 2px rgba(40, 50, 120, 0.08);
+        }
+
+        .filtros {
+            position: relative;
+            z-index: 5;
+        }
+
+        /* Desplegable propio con el mismo vidrio de la página (reemplaza la lista nativa del navegador). */
+        .dd {
+            position: relative;
+        }
+
+        .dd-boton {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            width: 100%;
+            box-sizing: border-box;
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font: inherit;
+            font-size: 0.95rem;
+            color: var(--text);
+            background: rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.85);
+            border-radius: 14px;
+            box-shadow: inset 0 1px 2px rgba(40, 50, 120, 0.08), 0 1px 0 rgba(255, 255, 255, 0.6);
+        }
+
+        .dd-boton:hover {
+            transform: none;
+        }
+
+        .dd-boton::after {
+            content: "";
+            flex: 0 0 auto;
+            width: 8px;
+            height: 8px;
+            border-right: 2px solid #1a2bd0;
+            border-bottom: 2px solid #1a2bd0;
+            transform: translateY(-2px) rotate(45deg);
+            transition: transform 0.15s ease;
+        }
+
+        .dd.abierto .dd-boton {
+            border-color: rgba(47, 111, 235, 0.65);
+            box-shadow: 0 0 0 3px rgba(47, 111, 235, 0.18), inset 0 1px 2px rgba(40, 50, 120, 0.08);
+        }
+
+        .dd.abierto .dd-boton::after {
+            transform: translateY(2px) rotate(-135deg);
+        }
+
+        .dd-lista {
+            display: none;
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            right: 0;
+            z-index: 2000;
+            margin: 0;
+            padding: 6px;
+            list-style: none;
+            max-height: 300px;
+            overflow-y: auto;
+            background: #f8f8fc;
+            border: 1px solid rgba(40, 50, 120, 0.12);
+            border-radius: 18px;
+            box-shadow: 0 16px 40px rgba(40, 50, 120, 0.22);
+            scrollbar-width: thin;
+            scrollbar-color: rgba(26, 43, 208, 0.35) transparent;
+        }
+
+        /* Barra de desplazamiento minimalista (lista y pagina). */
+        html {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(26, 43, 208, 0.35) transparent;
+        }
+
+        .dd-lista::-webkit-scrollbar,
+        html::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        .dd-lista::-webkit-scrollbar-track,
+        html::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .dd-lista::-webkit-scrollbar-thumb,
+        html::-webkit-scrollbar-thumb {
+            background: rgba(26, 43, 208, 0.35);
+            border-radius: 999px;
+        }
+
+        .dd-lista::-webkit-scrollbar-thumb:hover,
+        html::-webkit-scrollbar-thumb:hover {
+            background: rgba(26, 43, 208, 0.6);
+        }
+
+        .dd-lista::-webkit-scrollbar-button,
+        html::-webkit-scrollbar-button {
+            display: none;
+            width: 0;
+            height: 0;
+        }
+
+        /* Sin ubicaciones que mostrar: el mensaje cubre por completo el lugar del mapa (mismo marco y alto). */
+        .mapa-vacio {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+            min-height: 548px;
+            padding: 2rem;
+            text-align: center;
+            font-size: 1.15rem;
+            color: var(--muted);
+        }
+
+        .mapa-vacio-titulo {
+            display: block;
+            margin-bottom: 0.4rem;
+            font-size: inherit;
+            font-weight: 400;
+            color: inherit;
+        }
+
+        .mapa-vacio-texto {
+            margin: 0;
+        }
+
+        /* Aire arriba y abajo de la sección de ubicación. */
+        .seccion-ubicacion {
+            padding: 3rem 0 5rem;
+        }
+
+        .dd.abierto .dd-lista {
+            display: block;
+        }
+
+        .dd-opcion {
+            padding: 0.6rem 0.9rem;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            color: var(--text);
+            cursor: pointer;
+        }
+
+        .dd-opcion:hover,
+        .dd-opcion.resaltada {
+            background: rgba(47, 111, 235, 0.12);
+        }
+
+        .dd-opcion.activa {
+            font-weight: 600;
+            color: #1a2bd0;
+            background: rgba(47, 111, 235, 0.16);
+        }
+
+        /* Botones de vidrio: translúcidos, con borde de luz y brillo superior. */
+        button {
+            font: inherit;
+            font-size: 0.95rem;
+            color: var(--text);
+            padding: 0.55rem 1.3rem;
+            cursor: pointer;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.28));
+            -webkit-backdrop-filter: blur(14px) saturate(160%);
+            backdrop-filter: blur(14px) saturate(160%);
+            border: 1px solid rgba(255, 255, 255, 0.9);
+            border-radius: 999px;
+            box-shadow:
+                0 6px 18px rgba(40, 50, 120, 0.14),
+                inset 0 1px 0 rgba(255, 255, 255, 1),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.4);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow:
+                0 10px 22px rgba(40, 50, 120, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 1),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+
 
         .confirmacion-email {
             margin-top: 1rem;
@@ -109,21 +664,9 @@
         }
 
         .confirmacion-email button {
-            padding: 0.4rem 1rem;
             margin-right: 0.5rem;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            background: var(--card-bg);
-            color: var(--text);
-            font-size: 0.95rem;
-            cursor: pointer;
         }
 
-        .confirmacion-email button[value="true"] {
-            background: var(--accent);
-            border-color: var(--accent);
-            color: #ffffff;
-        }
 
         .alerta {
             display: flex;
@@ -131,8 +674,10 @@
             margin-top: 1rem;
             padding: 0.9rem 1rem;
             border: 1px solid;
-            border-left-width: 4px;
-            border-radius: 8px;
+            border-left-width: 1px;
+            border-radius: 16px;
+            -webkit-backdrop-filter: blur(16px) saturate(160%);
+            backdrop-filter: blur(16px) saturate(160%);
         }
 
         .alerta-icono {
@@ -165,6 +710,14 @@
             font-size: 0.9rem;
         }
 
+        /* Separación entre el mensaje de confirmación y los datos del envío (.card dl la dejaba en 0). */
+        .card .alerta-detalle {
+            margin-top: 1.1rem;
+            padding-top: 0.9rem;
+            border-top: 1px solid rgba(97, 110, 124, 0.25);
+            row-gap: 0.4rem;
+        }
+
         .card .alerta-detalle dt,
         .card .alerta-detalle dt:first-of-type {
             margin: 0;
@@ -175,62 +728,48 @@
             word-break: break-all;
         }
 
-        .alerta-exito {
-            background: rgba(26, 127, 55, 0.08);
-            border-color: rgba(26, 127, 55, 0.35);
-            border-left-color: #1a7f37;
-        }
-
-        .alerta-exito .alerta-icono,
-        .alerta-exito .alerta-titulo {
-            color: #1a7f37;
-        }
-
-        .alerta-exito .alerta-icono {
-            background: #1a7f37;
-            color: #ffffff;
-        }
-
-        .alerta-error {
-            background: rgba(207, 34, 46, 0.08);
-            border-color: rgba(207, 34, 46, 0.35);
-            border-left-color: #cf222e;
-        }
-
-        .alerta-error .alerta-titulo {
-            color: #cf222e;
-        }
-
-        .alerta-error .alerta-icono {
-            background: #cf222e;
-        }
-
+        /* Todas las alertas (cancelación, errores y éxito) comparten este estilo gris, sin ícono. */
         .alerta-info {
             background: rgba(97, 110, 124, 0.08);
             border-color: rgba(97, 110, 124, 0.35);
-            border-left-color: var(--muted);
+            border-left-width: 1px;
             color: var(--muted);
         }
 
-        .alerta-info .alerta-icono {
-            background: var(--muted);
+        .alerta-icono {
+            display: none;
         }
 
         .empty-state {
-            background: var(--card-bg);
-            border: 1px dashed var(--border);
-            border-radius: 10px;
-            padding: 1.5rem;
-            max-width: 480px;
+            margin-top: 1rem;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.16));
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            backdrop-filter: blur(24px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.75);
+            border-radius: 20px;
+            box-shadow: 0 12px 36px rgba(40, 50, 120, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+            padding: 1.25rem 1.5rem;
+            max-width: none;
             color: var(--muted);
         }
     </style>
 </head>
 <body>
-    <h1>Seguimiento de Bolsines</h1>
+    <section class="hero">
+        <div class="hero-texto">
+            <h1>Seguimiento de Bolsines</h1>
+            <p class="hero-descripcion">
+                Consultá en tiempo real dónde está cada bolsín enviado por tu Comisión Médica.
+                Filtrá por Comisión Médica destino o número de precinto, seleccioná un bolsín
+                en el mapa y, si querés, avisá su ubicación al Gerente de la Comisión Médica
+                destino por correo electrónico.
+            </p>
+        </div>
+        <img class="hero-imagen" th:src="@{/img/bolsin-hero.jpg}" width="2000" height="1493" alt="Bolsín en movimiento">
+    </section>
 
     <div th:if="${empleado == null}" class="empty-state">
-        No se encontro un empleado asociado al usuario logueado.
+        No se encontró un empleado asociado al usuario logueado.
     </div>
 
     <div th:if="${empleado != null}" class="cards">
@@ -258,118 +797,112 @@
         </div>
 
         <div class="card" th:if="${empleado.CM != null}">
-            <h2>Comision Medica</h2>
+            <h2>Comisión Médica</h2>
             <dl>
                 <dt>Nombre</dt>
                 <dd th:text="${empleado.CM.nombre}">-</dd>
-                <dt>Codigo</dt>
+                <dt>Código</dt>
                 <dd th:text="${empleado.CM.codigo}">-</dd>
-                <dt>Direccion</dt>
+                <dt>Dirección</dt>
                 <dd th:text="${empleado.CM.direccion}">-</dd>
                 <dt>Email</dt>
                 <dd th:text="${empleado.CM.email}">-</dd>
-                <dt>Telefono</dt>
+                <dt>Teléfono</dt>
                 <dd th:text="${empleado.CM.telefono}">-</dd>
             </dl>
         </div>
 
         <div class="card" th:if="${empleado.CM == null}">
-            <h2>Comision Medica</h2>
-            <p>El empleado no tiene una Comision Medica asignada.</p>
+            <h2>Comisión Médica</h2>
+            <p>El empleado no tiene una Comisión Médica asignada.</p>
         </div>
     </div>
 
-    <div th:if="${empleado != null}">
-        <h1 style="margin-top: 2rem;">Ubicacion de los bolsines</h1>
+    <div class="seccion-ubicacion" th:if="${empleado != null}">
+        <div class="encabezado-seccion">
+            <img class="encabezado-icono" th:src="@{/img/marcador-ubicacion.jpg}" width="2000" height="1493" alt="" onerror="this.style.display='none'">
+            <div>
+                <h1 class="titulo-seccion">Ubicación de los bolsines</h1>
+                <p class="subtitulo-seccion">
+                    Podés filtrar por Comisión Médica o número de precinto. Hacé clic en un marcador del mapa para elegir un bolsín y ver sus datos.
+                </p>
+            </div>
+        </div>
 
         <div th:if="${cuCancelado}" class="alerta alerta-info" role="status">
             <div class="alerta-icono" aria-hidden="true">i</div>
             <div class="alerta-contenido">
                 <strong class="alerta-titulo">Consulta cancelada</strong>
-                <p>Se cancelo la consulta de seguimiento de bolsines. <a th:href="@{/}">Volver a consultar</a></p>
+                <p>Se canceló la consulta de seguimiento de bolsines. <a th:href="@{/}">Volver a consultar</a></p>
             </div>
         </div>
 
         <div th:if="${noHayBolsinesEnviados and !cuCancelado}" class="empty-state">
-            No se encontraron bolsines en estado Enviado para la Comision Medica del usuario logueado.
+            No se encontraron bolsines en estado Enviado para la Comisión Médica del usuario logueado.
         </div>
 
         <th:block th:if="${!cuCancelado and !noHayBolsinesEnviados}">
-        <form class="filtros" th:action="@{/filtro-bolsin}" method="get">
-            <label for="cm-destino">Comision Medica destino</label>
-            <select id="cm-destino" name="cmDestino" onchange="this.form.submit()">
-                <option value="">Todas</option>
-                <option th:each="cm : ${comisionesMedicasDestino}" th:value="${cm}" th:text="${cm}"
-                        th:selected="${cm == cmDestinoSeleccionada}">CM destino</option>
-            </select>
+        <div class="fila-filtro">
+        <div class="filtros">
+        <form th:action="@{/filtro-bolsin}" method="get">
+            <div class="campo">
+                <label for="cm-destino">Comisión Médica destino</label>
+                <select id="cm-destino" name="cmDestino" onchange="this.form.submit()">
+                    <option value="">Todas</option>
+                    <option th:each="cm : ${comisionesMedicasDestino}" th:value="${cm}" th:text="${cm}"
+                            th:selected="${cm == cmDestinoSeleccionada}">CM destino</option>
+                </select>
+            </div>
 
-            <label for="precinto">Numero de precinto</label>
-            <input id="precinto" name="precinto" type="text" list="precintos" autocomplete="off"
-                   th:value="${numeroPrecintoSeleccionado}" placeholder="Ingrese un numero de precinto">
-            <datalist id="precintos">
-                <option th:each="p : ${numerosPrecinto}" th:value="${p}"></option>
-            </datalist>
+            <div class="campo">
+                <label for="precinto">Número de precinto</label>
+                <input id="precinto" name="precinto" type="text" list="precintos" autocomplete="off"
+                       th:value="${numeroPrecintoSeleccionado}" placeholder="Ingrese un número de precinto">
+                <datalist id="precintos">
+                    <option th:each="p : ${numerosPrecinto}" th:value="${p}"></option>
+                </datalist>
+            </div>
             <button type="submit">Filtrar</button>
         </form>
-
-        <div th:if="${precintoNoEncontrado != null}" class="alerta alerta-error" role="alert" style="margin-top: 1rem;">
-            <div class="alerta-icono" aria-hidden="true">!</div>
-            <div class="alerta-contenido">
-                <strong class="alerta-titulo">Precinto no encontrado</strong>
-                <p>No se encuentra bolsin con el numero de precinto ingresado:
-                    <span th:text="${precintoNoEncontrado}">P-000</span>.</p>
-            </div>
+        <form th:action="@{/cancelar}" method="get">
+            <button type="submit">Cancelar</button>
+        </form>
         </div>
-
-        <div th:if="${!#lists.isEmpty(numerosBolsinSinUbicacion)}" class="alerta alerta-error" role="alert" style="margin-top: 1rem;">
-            <div class="alerta-icono" aria-hidden="true">!</div>
-            <div class="alerta-contenido">
-                <strong class="alerta-titulo">Ubicacion no disponible</strong>
-                <p>El GPS Tracker no pudo informar la ubicacion de los bolsines:
-                    <span th:text="${#strings.listJoin(numerosBolsinSinUbicacion, ', ')}">101</span>.</p>
-            </div>
-        </div>
-
-        <p th:if="${seleccionBolsinHabilitada and bolsinSeleccionado == null and !#strings.isEmpty(mapa)}"
-           style="color: var(--muted); margin-top: 1rem;">
-            Seleccione un bolsin en el mapa.
-        </p>
-
-        <div class="card" th:if="${bolsinSeleccionado != null}" style="max-width: 480px; margin-top: 1rem;">
-            <h2>Bolsin seleccionado</h2>
+        <div class="card card-bolsin" th:if="${bolsinSeleccionado != null}">
+            <h2>Bolsín seleccionado</h2>
             <dl>
-                <dt>Numero de bolsin</dt>
+                <dt>Número de bolsín</dt>
                 <dd th:text="${bolsinSeleccionado.numeroBolsin}">-</dd>
-                <dt>Numero de precinto</dt>
+                <dt>Número de precinto</dt>
                 <dd th:text="${bolsinSeleccionado.numeroPrecinto}">-</dd>
-                <dt>Comision Medica destino</dt>
+                <dt>Comisión Médica destino</dt>
                 <dd th:text="${bolsinSeleccionado.cmDestino != null ? bolsinSeleccionado.cmDestino.nombre : '-'}">-</dd>
             </dl>
 
             <form th:if="${envioCorreoSolicitado}" class="confirmacion-email"
                   th:action="@{/confirmacion-envio-email}" method="get">
                 <p>
-                    ¿Desea enviar un correo electronico al Gerente de la Comision Medica destino
-                    para informar la ubicacion del bolsin?
+                    ¿Desea enviar un correo electrónico al Gerente de la Comisión Médica destino
+                    para informar la ubicación del bolsín?
                 </p>
-                <button type="submit" name="confirmacion" value="true">Si</button>
+                <button type="submit" name="confirmacion" value="true">Sí</button>
                 <button type="submit" name="confirmacion" value="false">No</button>
             </form>
 
-            <div th:if="${envioEmailConfirmado and ejecucionExitosaCU31}" class="alerta alerta-exito" role="status">
+            <div th:if="${envioEmailConfirmado and ejecucionExitosaCU31}" class="alerta alerta-info" role="status">
                 <div class="alerta-icono" aria-hidden="true">&#10003;</div>
                 <div class="alerta-contenido">
                     <strong class="alerta-titulo">Correo enviado</strong>
                     <p>
-                        Se notifico la ubicacion del bolsin
+                        Se notificó la ubicación del bolsín
                         <span th:text="${bolsinSeleccionado.numeroBolsin}">101</span>
-                        al Gerente de la Comision Medica destino.
+                        al Gerente de la Comisión Médica destino.
                     </p>
                     <dl class="alerta-detalle">
                         <dt>Destinatario</dt>
                         <dd th:text="${emailGCMDestino}">gcm@bolsin.com</dd>
                         <th:block th:if="${ubicacionNotificada != null}">
-                            <dt>Ultima actualizacion</dt>
+                            <dt>Última actualización</dt>
                             <dd th:text="${ubicacionNotificada.fechaHoraUltimaActualizacion != null
                                     ? #temporals.format(ubicacionNotificada.fechaHoraUltimaActualizacion, 'dd/MM/yyyy HH:mm')
                                     : '-'}">-</dd>
@@ -380,46 +913,263 @@
                 </div>
             </div>
 
-            <div th:if="${envioEmailConfirmado and emailGCMDestino != null and !ejecucionExitosaCU31}" class="alerta alerta-error" role="alert">
+            <div th:if="${envioEmailConfirmado and emailGCMDestino != null and !ejecucionExitosaCU31}" class="alerta alerta-info" role="alert">
                 <div class="alerta-icono" aria-hidden="true">!</div>
                 <div class="alerta-contenido">
                     <strong class="alerta-titulo">No se pudo enviar el correo</strong>
-                    <p>No se pudo notificar la ubicacion del bolsin al Gerente de la Comision Medica destino.</p>
+                    <p>No se pudo notificar la ubicación del bolsín al Gerente de la Comisión Médica destino.</p>
                 </div>
             </div>
 
-            <div th:if="${envioEmailConfirmado and emailGCMDestino == null}" class="alerta alerta-error" role="alert">
+            <div th:if="${envioEmailConfirmado and emailGCMDestino == null}" class="alerta alerta-info" role="alert">
                 <div class="alerta-icono" aria-hidden="true">!</div>
                 <div class="alerta-contenido">
                     <strong class="alerta-titulo">Gerente no encontrado</strong>
-                    <p>No se encontro un Gerente con correo electronico en la Comision Medica destino.</p>
+                    <p>No se encontró un Gerente con correo electrónico en la Comisión Médica destino.</p>
                 </div>
             </div>
 
             <div th:if="${deseaEnviarEmail == false}" class="alerta alerta-info" role="status">
                 <div class="alerta-icono" aria-hidden="true">i</div>
                 <div class="alerta-contenido">
-                    <p>No se enviara el correo electronico.</p>
+                    <p>No se enviará el correo electrónico.</p>
                 </div>
             </div>
         </div>
+        <div class="card card-bolsin card-vacia" th:if="${bolsinSeleccionado == null}">
+            <p>Ningún bolsín seleccionado</p>
+        </div>
+        </div>
+        </th:block>
 
-        <div th:if="${#strings.isEmpty(mapa) and precintoNoEncontrado == null}" class="empty-state">
-            <span th:if="${cmDestinoSeleccionada != null or numeroPrecintoSeleccionado != null}">
-                Ningun bolsin con ubicacion informada coincide con los filtros seleccionados.
-            </span>
-            <span th:unless="${cmDestinoSeleccionada != null or numeroPrecintoSeleccionado != null}">
-                El GPS Tracker no informo ubicaciones para los bolsines enviados.
-            </span>
+        <th:block th:if="${!cuCancelado and !noHayBolsinesEnviados}">
+
+        <div th:if="${!#lists.isEmpty(numerosBolsinSinUbicacion)}" class="alerta alerta-info" role="alert" style="margin-top: 1rem;">
+            <div class="alerta-icono" aria-hidden="true">!</div>
+            <div class="alerta-contenido">
+                <strong class="alerta-titulo">Ubicación no disponible</strong>
+                <p>El GPS Tracker no pudo informar la ubicación de los bolsines:
+                    <span th:text="${#strings.listJoin(numerosBolsinSinUbicacion, ', ')}">101</span>.</p>
+            </div>
         </div>
 
-        <div th:if="${!#strings.isEmpty(mapa)}" th:utext="${mapa}"></div>
+        <div th:if="${#strings.isEmpty(mapa)}" class="mapa-vidrio mapa-vacio" role="alert">
+            <div th:if="${precintoNoEncontrado != null}">
+                <strong class="mapa-vacio-titulo">Precinto no encontrado</strong>
+                <p class="mapa-vacio-texto">No se encuentra bolsín con el número de precinto ingresado:
+                    <span th:text="${precintoNoEncontrado}">P-000</span>.</p>
+            </div>
+            <th:block th:if="${precintoNoEncontrado == null}">
+                <span th:if="${cmDestinoSeleccionada != null or numeroPrecintoSeleccionado != null}">
+                    Ningún bolsín con ubicación informada coincide con los filtros seleccionados.
+                </span>
+                <span th:unless="${cmDestinoSeleccionada != null or numeroPrecintoSeleccionado != null}">
+                    El GPS Tracker no informó ubicaciones para los bolsines enviados.
+                </span>
+            </th:block>
+        </div>
 
-        <form th:action="@{/cancelar}" method="get" style="margin-top: 1.5rem;">
-            <button type="submit">Cancelar</button>
-        </form>
+        <div class="mapa-vidrio" th:if="${!#strings.isEmpty(mapa)}" th:utext="${mapa}"></div>
+
         </th:block>
     </div>
+    <script>
+        // Reemplaza el pin azul por defecto de Leaflet por un marcador propio (punto con pulso).
+        (function () {
+            var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44">'
+                + '<circle cx="22" cy="22" r="10" fill="#1f2fe0" fill-opacity="0.35">'
+                + '<animate attributeName="r" values="10;20;10" dur="2.4s" repeatCount="indefinite"/>'
+                + '<animate attributeName="fill-opacity" values="0.35;0;0.35" dur="2.4s" repeatCount="indefinite"/>'
+                + '</circle>'
+                + '<circle cx="22" cy="22" r="9" fill="#ffffff"/>'
+                + '<circle cx="22" cy="22" r="6" fill="#131316"/>'
+                + '<circle cx="22" cy="22" r="2" fill="#ffffff"/>'
+                + '</svg>';
+            var uri = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+            document.querySelectorAll('#mapa .leaflet-marker-icon').forEach(function (icono) {
+                icono.src = uri;
+            });
+
+            // Limita cuanto se puede alejar el mapa (el Java no define un zoom minimo). 4 = vista de pais.
+            if (window.L && L.Map) {
+                L.Map.prototype.getMinZoom = function () {
+                    return 4;
+                };
+            }
+        })();
+    </script>
+    <script>
+        // Reemplaza la lista nativa del select por un desplegable de vidrio. El select sigue en la
+        // pagina (oculto) y es el que se envia en el formulario, asi que el comportamiento no cambia.
+        (function () {
+            document.querySelectorAll('.filtros select').forEach(function (select) {
+                var contenedor = document.createElement('div');
+                contenedor.className = 'dd';
+                var boton = document.createElement('button');
+                boton.type = 'button';
+                boton.className = 'dd-boton';
+                boton.setAttribute('aria-haspopup', 'listbox');
+                boton.setAttribute('aria-expanded', 'false');
+                var lista = document.createElement('ul');
+                lista.className = 'dd-lista';
+                lista.setAttribute('role', 'listbox');
+                var resaltada = -1;
+
+                function textoActual() {
+                    var opcion = select.options[select.selectedIndex];
+                    boton.textContent = opcion ? opcion.textContent.trim() : '';
+                }
+
+                Array.prototype.forEach.call(select.options, function (opcion, i) {
+                    var item = document.createElement('li');
+                    item.className = 'dd-opcion' + (opcion.selected ? ' activa' : '');
+                    item.setAttribute('role', 'option');
+                    item.setAttribute('aria-selected', opcion.selected ? 'true' : 'false');
+                    item.dataset.indice = String(i);
+                    item.textContent = opcion.textContent.trim();
+                    lista.appendChild(item);
+                });
+
+                function marcar(indice) {
+                    var items = lista.children;
+                    if (!items.length) { return; }
+                    resaltada = Math.max(0, Math.min(items.length - 1, indice));
+                    Array.prototype.forEach.call(items, function (it, i) {
+                        it.classList.toggle('resaltada', i === resaltada);
+                    });
+                    items[resaltada].scrollIntoView({ block: 'nearest' });
+                }
+
+                function abrir() {
+                    contenedor.classList.add('abierto');
+                    boton.setAttribute('aria-expanded', 'true');
+                    marcar(select.selectedIndex);
+                }
+
+                function cerrar() {
+                    contenedor.classList.remove('abierto');
+                    boton.setAttribute('aria-expanded', 'false');
+                }
+
+                function elegir(indice) {
+                    select.selectedIndex = indice;
+                    textoActual();
+                    cerrar();
+                    select.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+
+                boton.addEventListener('click', function () {
+                    if (contenedor.classList.contains('abierto')) { cerrar(); } else { abrir(); }
+                });
+                lista.addEventListener('click', function (e) {
+                    var item = e.target.closest('.dd-opcion');
+                    if (item) { elegir(parseInt(item.dataset.indice, 10)); }
+                });
+                contenedor.addEventListener('keydown', function (e) {
+                    var abierto = contenedor.classList.contains('abierto');
+                    if (e.key === 'Escape' && abierto) {
+                        cerrar();
+                        boton.focus();
+                    } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        if (!abierto) { abrir(); } else { marcar(resaltada + (e.key === 'ArrowDown' ? 1 : -1)); }
+                    } else if (e.key === 'Enter' && abierto && resaltada >= 0) {
+                        e.preventDefault();
+                        elegir(resaltada);
+                    }
+                });
+                document.addEventListener('click', function (e) {
+                    if (!contenedor.contains(e.target)) { cerrar(); }
+                });
+
+                textoActual();
+                contenedor.appendChild(boton);
+                contenedor.appendChild(lista);
+                select.parentNode.insertBefore(contenedor, select.nextSibling);
+                select.style.display = 'none';
+            });
+        })();
+    </script>
+    <script>
+        // Lista de sugerencias propia para el numero de precinto (reemplaza el desplegable nativo del
+        // datalist, que el navegador dibuja oscuro). El input y su valor siguen siendo los mismos.
+        (function () {
+            var input = document.getElementById('precinto');
+            var datalist = document.getElementById('precintos');
+            if (!input || !datalist) { return; }
+            var valores = Array.prototype.map.call(datalist.options, function (o) { return o.value; });
+
+            var contenedor = document.createElement('div');
+            contenedor.className = 'dd';
+            input.parentNode.insertBefore(contenedor, input);
+            contenedor.appendChild(input);
+            input.removeAttribute('list');
+            var lista = document.createElement('ul');
+            lista.className = 'dd-lista';
+            lista.setAttribute('role', 'listbox');
+            contenedor.appendChild(lista);
+            var resaltada = -1;
+
+            function dibujar() {
+                var texto = valores.indexOf(input.value) >= 0 ? '' : input.value.toLowerCase();
+                lista.innerHTML = '';
+                resaltada = -1;
+                var coincidencias = valores.filter(function (v) { return v.toLowerCase().indexOf(texto) >= 0; });
+                coincidencias.forEach(function (v) {
+                    var item = document.createElement('li');
+                    item.className = 'dd-opcion' + (v === input.value ? ' activa' : '');
+                    item.setAttribute('role', 'option');
+                    item.textContent = v;
+                    lista.appendChild(item);
+                });
+                if (!coincidencias.length) {
+                    var vacio = document.createElement('li');
+                    vacio.className = 'dd-vacio';
+                    vacio.textContent = 'Sin coincidencias';
+                    lista.appendChild(vacio);
+                }
+            }
+
+            function abrir() { dibujar(); contenedor.classList.add('abierto'); }
+            function cerrar() { contenedor.classList.remove('abierto'); }
+            function marcar(indice) {
+                var items = lista.querySelectorAll('.dd-opcion');
+                if (!items.length) { return; }
+                resaltada = Math.max(0, Math.min(items.length - 1, indice));
+                Array.prototype.forEach.call(items, function (it, i) { it.classList.toggle('resaltada', i === resaltada); });
+                items[resaltada].scrollIntoView({ block: 'nearest' });
+            }
+
+            input.addEventListener('focus', abrir);
+            input.addEventListener('click', abrir);
+            input.addEventListener('input', abrir);
+            // mousedown evita que el input pierda el foco antes de registrar el clic en la opcion.
+            lista.addEventListener('mousedown', function (e) {
+                var item = e.target.closest('.dd-opcion');
+                if (!item) { return; }
+                e.preventDefault();
+                input.value = item.textContent;
+                cerrar();
+            });
+            input.addEventListener('keydown', function (e) {
+                var abierto = contenedor.classList.contains('abierto');
+                if (e.key === 'Escape') {
+                    cerrar();
+                } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (!abierto) { abrir(); }
+                    marcar(resaltada + (e.key === 'ArrowDown' ? 1 : -1));
+                } else if (e.key === 'Enter' && abierto && resaltada >= 0) {
+                    e.preventDefault();
+                    input.value = lista.querySelectorAll('.dd-opcion')[resaltada].textContent;
+                    cerrar();
+                }
+            });
+            document.addEventListener('click', function (e) {
+                if (!contenedor.contains(e.target)) { cerrar(); }
+            });
+        })();
+    </script>
     <script>
         // Every action reloads the page; keep the scroll position across those reloads.
         (function () {
@@ -434,7 +1184,12 @@
                     // Storage unavailable: the page simply opens at the top.
                 }
             });
-            window.addEventListener('load', function () {
+            // Se restaura apenas el DOM está listo (antes del primer dibujo, con la página oculta por
+            // la clase "restaurando") para que no se vea el salto desde arriba hasta la posición guardada.
+            var revelar = function () {
+                document.documentElement.classList.remove('restaurando');
+            };
+            var restaurar = function () {
                 try {
                     var scrollY = sessionStorage.getItem(clave);
                     if (scrollY !== null) {
@@ -443,6 +1198,16 @@
                 } catch (e) {
                     // Storage unavailable: the page simply opens at the top.
                 }
+                revelar();
+            };
+            restaurar();
+            // Respaldo por si algo cambió el alto de la página al terminar de cargar (solo si el usuario no se movió).
+            var usuarioMovio = false;
+            window.addEventListener('wheel', function () { usuarioMovio = true; }, { passive: true });
+            window.addEventListener('touchstart', function () { usuarioMovio = true; }, { passive: true });
+            window.addEventListener('keydown', function () { usuarioMovio = true; });
+            window.addEventListener('load', function () {
+                if (!usuarioMovio) { restaurar(); }
             });
         })();
     </script>
