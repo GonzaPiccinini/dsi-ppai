@@ -420,5 +420,31 @@
         </form>
         </th:block>
     </div>
+    <script>
+        // Every action reloads the page; keep the scroll position across those reloads.
+        (function () {
+            var clave = 'seguimientoBolsines.scrollY';
+            if ('scrollRestoration' in history) {
+                history.scrollRestoration = 'manual';
+            }
+            window.addEventListener('pagehide', function () {
+                try {
+                    sessionStorage.setItem(clave, String(window.scrollY));
+                } catch (e) {
+                    // Storage unavailable: the page simply opens at the top.
+                }
+            });
+            window.addEventListener('load', function () {
+                try {
+                    var scrollY = sessionStorage.getItem(clave);
+                    if (scrollY !== null) {
+                        window.scrollTo(0, parseInt(scrollY, 10));
+                    }
+                } catch (e) {
+                    // Storage unavailable: the page simply opens at the top.
+                }
+            });
+        })();
+    </script>
 </body>
 </html>
