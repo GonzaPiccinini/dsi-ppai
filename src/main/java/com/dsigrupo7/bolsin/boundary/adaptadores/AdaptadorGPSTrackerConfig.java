@@ -13,7 +13,7 @@ public class AdaptadorGPSTrackerConfig {
     // To use another GPS Tracker model, return its adapter built with its service, e.g.
     // new AdaptadorNavTrackQX7A(new ServicioNavTrackQX7A(baseUrl)).
     @Bean
-    public AdaptadorGPSTracker adaptadorGPSTracker(@Value("${gps.tracker.url:http://localhost:8081}") String baseUrl) {
+    public IAdaptadorGPSTracker adaptadorGPSTracker(@Value("${gps.tracker.url:http://localhost:8081}") String baseUrl) {
         return new AdaptadorXtr4500l(new ServicioXtr4500l(baseUrl));
     }
 }
