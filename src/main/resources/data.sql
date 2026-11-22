@@ -56,7 +56,7 @@ INSERT IGNORE INTO bolsin (id, fecha, numero_bolsin, numero_precinto, peso, cm_o
     (7, '2026-09-07', 107, 'P-1007', 18.4, 8, 9),
     (8, '2026-09-08', 108, 'P-1008', 7.2, 9, 4),
     (9, '2026-09-09', 109, 'P-1009', 11.6, 10, 1),
-    (10, '2026-09-10', 110, 'P-1010', 14.8, 11, 2),
+    (10, '2026-09-10', 110, 'P-1010', 14.8, 1, 2),
     (11, '2026-09-11', 111, 'P-1011', 6.4, 1, 2),
     (12, '2026-09-11', 112, 'P-1012', 13.1, 1, 3),
     (13, '2026-09-12', 113, 'P-1013', 9.7, 1, 4),
@@ -66,14 +66,15 @@ INSERT IGNORE INTO bolsin (id, fecha, numero_bolsin, numero_precinto, peso, cm_o
     (17, '2026-09-14', 117, 'P-1017', 10.5, 1, 9),
     (18, '2026-09-14', 118, 'P-1018', 12.0, 1, 10);
 
--- Con el usuario jperez (CM-CBA-01) se listan los Enviados con origen CM-CBA-01: 101, 111, 112, 113, 115, 116, 117 y 118.
+-- Con el usuario jperez (CM-CBA-01) se listan los Enviados con origen CM-CBA-01: 101, 110, 111, 112, 113, 115, 116, 117 y 118.
 -- 114 tambien tiene origen CM-CBA-01 pero esta Abierto, asi que no se lista.
 -- 101: Abierto -> Enviado (actual)
 -- 102: Enviado (origen otra CM)
 -- 103: Abierto (actual)
 -- 104: Enviado (origen otra CM)
 -- 105: Abierto -> Enviado -> Abierto (reabierto)
--- 106 a 110: Enviado (origen otra CM), salvo 108 que esta Abierto
+-- 106 a 109: Enviado (origen otra CM), salvo 108 que esta Abierto
+-- 110: Enviado (origen CM-CBA-01)
 -- 111 a 118: origen CM-CBA-01 (el mock del GPS los conoce con ese origen)
 INSERT IGNORE INTO cambio_estado_bolsin (id, fecha_hora_inicio, fecha_hora_fin, bolsin_id, estado_id) VALUES
     (1, '2026-09-01 08:00:00', '2026-09-01 10:00:00', 1, 1),
