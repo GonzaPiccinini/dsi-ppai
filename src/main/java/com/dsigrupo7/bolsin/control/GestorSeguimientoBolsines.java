@@ -1,6 +1,5 @@
 package com.dsigrupo7.bolsin.control;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -54,7 +53,6 @@ public class GestorSeguimientoBolsines {
     private ComisionMedica CMDestino;
     private String emailGCM;
     private Integer numeroBolsinSeleccionado;
-    private LocalDateTime fechaHora;
     private List<UbicacionBolsin> ubicacionesAMostrar = new ArrayList<>();
     private List<String> comisionesMedicasDestino = new ArrayList<>();
     private List<String> numerosPrecinto = new ArrayList<>();
@@ -74,7 +72,6 @@ public class GestorSeguimientoBolsines {
         deseaEnviarEmail = null;
         envioEmailConfirmado = false;
         emailGCM = null;
-        fechaHora = null;
         ubicacionNotificada = null;
         posicionBolsin = new ArrayList<>();
         ubicacionesAMostrar = posicionBolsin;
@@ -115,7 +112,6 @@ public class GestorSeguimientoBolsines {
         deseaEnviarEmail = null;
         envioEmailConfirmado = false;
         emailGCM = null;
-        fechaHora = null;
         ubicacionNotificada = null;
         for (Bolsin bolsin : bolsinesEnviados) {
             if (bolsin.getNumeroBolsin() != null && bolsin.getNumeroBolsin().equals(numeroBolsinSeleccionado)) {
@@ -158,7 +154,6 @@ public class GestorSeguimientoBolsines {
         deseaEnviarEmail = null;
         envioEmailConfirmado = false;
         emailGCM = null;
-        fechaHora = null;
         ubicacionNotificada = null;
 
         List<Integer> numerosBolsinAMostrar = new ArrayList<>();
@@ -300,7 +295,6 @@ public class GestorSeguimientoBolsines {
             return;
         }
 
-        fechaHora = getFechaHora();
         boolean notificacionExitosa = gestorNotificarUbicacionBolsin.notificarUbicacionBolsin(
                 emailGCM,
                 ubicacion.numeroBolsin(),
@@ -335,10 +329,6 @@ public class GestorSeguimientoBolsines {
             }
         }
         return ubicacionBolsin;
-    }
-
-    private LocalDateTime getFechaHora() {
-        return LocalDateTime.now();
     }
 
     private void finCU() {
