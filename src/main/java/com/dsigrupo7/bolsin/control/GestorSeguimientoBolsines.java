@@ -63,7 +63,10 @@ public class GestorSeguimientoBolsines {
     private boolean envioEmailConfirmado;
     private UbicacionBolsin ubicacionNotificada;
 
+    // CU 36 - Consultar seguimiento de bolsines.
+    // Se ejecuta despues del paso 1 (el EB selecciona la opcion para consultar la ubicacion de los bolsines).
     public void consultarUbicacionDeBolsines() {
+        // Se descarta el estado de una consulta anterior para iniciar el CU desde cero.
         bolsinSeleccionado = null;
         numeroBolsinSeleccionado = null;
         CMDestino = null;
@@ -80,24 +83,31 @@ public class GestorSeguimientoBolsines {
         numerosPrecinto = new ArrayList<>();
         mapa = "";
 
+        // Paso 2: el sistema busca la CM del usuario logueado (la pantalla la muestra al renderizarse).
         CMUsuarioLogueado = obtenerCMUsuario();
         codigoCMUsuarioLogueado = CMUsuarioLogueado != null ? CMUsuarioLogueado.getCodigo() : null;
 
+        // Paso 3: el sistema busca los bolsines en estado Enviado cuya CM origen es la CM del usuario logueado.
         bolsinesEnviados = obtenerBolsinesEnviadosDeCM(CMUsuarioLogueado);
         if (bolsinesEnviados.isEmpty()) {
-            // A1: no bolsines in Enviado state for the logged user's CM.
+            // A1: no se encuentran bolsines en estado Enviado. Se informa al EB y finaliza el CU.
             pantallaSeguimientoBolsines.informarNoHayBolsinesEnviados();
             finCU();
             return;
         }
 
+        // Pasos 4 y 5: el sistema solicita al GPS Tracker los datos de localizacion de los bolsines
+        // y los recibe (a traves del adaptador del modelo configurado).
         posicionBolsin = obtenerDatosLocalizacionBolsines(bolsinesEnviados);
         ubicacionesAMostrar = posicionBolsin;
         if (!numeroBolsinesSinUbicacion.isEmpty()) {
-            // A3: the GPS Tracker could not report the location of some bolsines.
+            // A3: el GPS Tracker no pudo informar la ubicacion de uno o mas bolsines. Se informa al EB
+            // y el CU continua con los bolsines que si tienen ubicacion.
             pantallaSeguimientoBolsines.informarBolsinesSinUbicacion(numeroBolsinesSinUbicacion);
         }
 
+        // Paso 6: el sistema muestra sobre un mapa la posicion de los bolsines, habilitando la opcion
+        // de filtrar por numero de precinto o CM destino y de seleccionar un bolsin del mapa.
         comisionesMedicasDestino = buscarComisionesMedicasDestino();
         numerosPrecinto = buscarNumerosPrecinto();
         visualizarBolsinesEnMapa();
@@ -105,6 +115,7 @@ public class GestorSeguimientoBolsines {
         pantallaSeguimientoBolsines.pedirSeleccionBolsin();
     }
 
+    // Paso 7: el EB selecciona un bolsin del mapa.
     public void tomarSeleccionBolsin(Integer numeroBolsin) {
         numeroBolsinSeleccionado = numeroBolsin;
         bolsinSeleccionado = null;
@@ -123,13 +134,17 @@ public class GestorSeguimientoBolsines {
             return;
         }
         if (numeroBolsinesSinUbicacion.contains(numeroBolsinSeleccionado)) {
-            // A3: without a reported location there is nothing to notify.
+            // A3: el GPS Tracker no informo la ubicacion del bolsin seleccionado, por lo que no hay
+            // ubicacion para notificar y no se ofrece el envio del correo electronico.
             pantallaSeguimientoBolsines.informarBolsinesSinUbicacion(List.of(numeroBolsinSeleccionado));
             return;
         }
+        // Paso 8: el sistema consulta si se desea enviar un correo electronico al GCM de la CM destino
+        // para informar la ubicacion del bolsin.
         pantallaSeguimientoBolsines.solicitarEnvioCorreoElectronico();
     }
 
+    // Paso 9: el EB confirma (o no) el envio del correo electronico.
     public void confirmarEnvioEmail(Boolean confirmacion) {
         deseaEnviarEmail = confirmacion;
         envioEmailConfirmado = false;
@@ -140,11 +155,13 @@ public class GestorSeguimientoBolsines {
             envioEmailConfirmado = true;
             enviarEmailAGCMDestino();
         } else {
-            // A5: the EB does not choose to send the email.
+            // A5: el EB no selecciona la opcion para enviar el correo electronico. Fin del CU.
             finCU();
         }
     }
 
+    // Paso 6 (opcion de filtrado): el EB filtra los bolsines del mapa por CM destino y/o numero de precinto.
+    // Se filtra sobre las ubicaciones ya obtenidas, sin volver a consultar al GPS Tracker.
     public void tomarFiltroBolsin(String cmDestino, String numeroPrecinto) {
         cmDestinoSeleccionada = cmDestino == null || cmDestino.isBlank() ? null : cmDestino;
         numeroPrecintoSeleccionado = numeroPrecinto == null || numeroPrecinto.isBlank() ? null : numeroPrecinto;
@@ -177,15 +194,15 @@ public class GestorSeguimientoBolsines {
         }
 
         if (numeroPrecintoSeleccionado != null && !existeBolsinConPrecinto(numeroPrecintoSeleccionado)) {
-            // A2: no sent bolsin has the entered seal number.
+            // A2: no se encuentra un bolsin con el numero de precinto ingresado. Se informa al EB.
             pantallaSeguimientoBolsines.informarPrecintoNoEncontrado(numeroPrecintoSeleccionado);
         }
 
         visualizarBolsinesEnMapa();
     }
 
+    // A4: el EB cancela la ejecucion del caso de uso (puede ocurrir en cualquier paso).
     public void cancelarCU() {
-        // A4: the EB cancels the use case.
         bolsinSeleccionado = null;
         deseaEnviarEmail = null;
         envioEmailConfirmado = false;
@@ -204,6 +221,7 @@ public class GestorSeguimientoBolsines {
         return false;
     }
 
+    // Paso 2: obtiene el empleado de la sesion y su CM.
     private ComisionMedica obtenerCMUsuario() {
         Sesion sesion = obtenerSesionMock();
         Usuario usuario = sesion.getUsuario();
@@ -219,6 +237,7 @@ public class GestorSeguimientoBolsines {
         return empleadoLogueado != null ? empleadoLogueado.getCM() : null;
     }
 
+    // Paso 3: filtra los bolsines en estado Enviado cuya CM origen es la CM del usuario logueado.
     private List<Bolsin> obtenerBolsinesEnviadosDeCM(ComisionMedica comisionMedica) {
         List<Bolsin> bolsinesEnviadosDeCM = new ArrayList<>();
 
@@ -232,6 +251,9 @@ public class GestorSeguimientoBolsines {
         return bolsinesEnviadosDeCM;
     }
 
+    // Pasos 4 y 5: por cada bolsin enviado se pide la ubicacion al GPS Tracker. El Gestor solo conoce
+    // a IAdaptadorGPSTracker (patron Adapter): el adaptador concreto traduce la llamada al endpoint del
+    // modelo y convierte su respuesta a UbicacionBolsin.
     private List<UbicacionBolsin> obtenerDatosLocalizacionBolsines(List<Bolsin> bolsines) {
         numeroBolsinesEnviados = new ArrayList<>();
         List<UbicacionBolsin> ubicacionesBolsines = new ArrayList<>();
@@ -241,9 +263,13 @@ public class GestorSeguimientoBolsines {
 
             ComisionMedica cmDestino = bolsin.obtenerCMDestino();
             String codigoCMDestino = cmDestino != null ? cmDestino.getCodigo() : null;
+            // Paso 4: solicita al GPS Tracker los datos de localizacion (se envian la CM origen y la CM
+            // destino porque cada modelo usa una u otra).
             UbicacionBolsin ubicacionBolsin = adaptadorGPSTracker.obtenerUbicacionBolsin(numeroBolsin,
                     codigoCMUsuarioLogueado, codigoCMDestino);
+            // Paso 5: recibe los datos de localizacion del bolsin.
             if (ubicacionBolsin == null) {
+                // A3: el GPS Tracker no pudo informar la ubicacion de este bolsin.
                 numeroBolsinesSinUbicacion.add(numeroBolsin);
             } else {
                 ubicacionesBolsines.add(ubicacionBolsin);
@@ -252,6 +278,7 @@ public class GestorSeguimientoBolsines {
         return ubicacionesBolsines;
     }
 
+    // Paso 6: CM destino disponibles para el filtro del mapa.
     private List<String> buscarComisionesMedicasDestino() {
         List<String> nombres = new ArrayList<>();
         for (Bolsin bolsin : bolsinesEnviados) {
@@ -264,6 +291,7 @@ public class GestorSeguimientoBolsines {
         return nombres;
     }
 
+    // Paso 6: numeros de precinto disponibles para el filtro del mapa.
     private List<String> buscarNumerosPrecinto() {
         List<String> precintos = new ArrayList<>();
         for (Bolsin bolsin : bolsinesEnviados) {
@@ -275,6 +303,7 @@ public class GestorSeguimientoBolsines {
         return precintos;
     }
 
+    // Paso 6: genera el mapa (Servidor Google Maps / Leaflet) con la posicion de los bolsines y lo muestra.
     private void visualizarBolsinesEnMapa() {
         InterfazMapa interfazMapa = new InterfazMapa();
         mapa = interfazMapa.crearMapa(ubicacionesAMostrar);
@@ -282,6 +311,7 @@ public class GestorSeguimientoBolsines {
     }
 
     private void enviarEmailAGCMDestino() {
+        // Paso 10: el sistema busca la direccion de correo electronico del GCM de la CM destino.
         CMDestino = bolsinSeleccionado.obtenerCMDestino();
         String codigoCMDestino = CMDestino != null ? CMDestino.getCodigo() : null;
 
@@ -295,6 +325,8 @@ public class GestorSeguimientoBolsines {
             return;
         }
 
+        // Paso 11: se incluye el CU 31 "Notificar ubicacion de bolsin" para informar numero de bolsin,
+        // fecha y hora de ultima actualizacion y coordenadas del bolsin.
         boolean notificacionExitosa = gestorNotificarUbicacionBolsin.notificarUbicacionBolsin(
                 emailGCM,
                 ubicacion.numeroBolsin(),
@@ -304,11 +336,13 @@ public class GestorSeguimientoBolsines {
 
         if (notificacionExitosa) {
             ubicacionNotificada = ubicacion;
+            // Paso 11: informa la ejecucion exitosa del CU 31. Fin del caso de uso.
             pantallaSeguimientoBolsines.mostrarEjecucionExitosaCU31();
             finCU();
         }
     }
 
+    // Paso 10: busca el empleado con rol GCM de la CM destino y devuelve su email.
     private String consultarEmailGCMDestino(String codigoCMDestino) {
         String email = null;
         List<Empleado> empleados = empleadoRepository.findAll();
@@ -331,8 +365,8 @@ public class GestorSeguimientoBolsines {
         return ubicacionBolsin;
     }
 
+    // Fin del caso de uso: se descarta la seleccion; para repetir el flujo se debe seleccionar otro bolsin.
     private void finCU() {
-        // The selection has been consumed: a new bolsin must be selected to run the flow again.
         numeroBolsinSeleccionado = null;
     }
 

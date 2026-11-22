@@ -27,12 +27,25 @@ public class AdaptadorGeoPulseMtr900 implements IAdaptadorGPSTracker {
             Object[][] respuesta = servicio.fetchCargoPositions(API_KEY, numeroBolsin);
             return adaptar(respuesta);
         } catch (RestClientException | JacksonException | ClassCastException | IllegalArgumentException e) {
-            // Bolsin unknown to the tracker, tracker unavailable or invalid matrix: no location (A3).
+            // A3: bolsin desconocido para el GPS Tracker, servicio no disponible o matriz invalida:
+            // no hay ubicacion para informar.
             return null;
         }
     }
 
-    // Converts the vendor matrix [[numeroBolsin, latitud, longitud, fechaHora]] into the common type.
+    /**
+     * Adapta la respuesta de ServicioGeoPulseMtr900.fetchCargoPositions() al tipo comun UbicacionBolsin.
+     *
+     * El modelo GeoPulse MTR-900 devuelve una matriz donde cada fila es un bolsin y cada columna un dato:
+     * [[101, -31.4201, -64.1888, "2026-03-07T12:30"]]
+     * (numero de bolsin, latitud, longitud y fecha y hora de la ultima actualizacion de posicion).
+     *
+     * 1. Si la matriz esta vacia o la fila no tiene 4 columnas no hay ubicacion (A3).
+     * 2. Toma la primera fila (se consulta de a un bolsin).
+     * 3. Las celdas llegan como Object: los numeros se convierten desde Number (intValue/doubleValue)
+     *    y la fecha se parsea desde String a LocalDateTime. Un tipo inesperado lanza una excepcion
+     *    que obtenerUbicacionBolsin() trata como A3.
+     */
     private UbicacionBolsin adaptar(Object[][] respuesta) {
         if (respuesta == null || respuesta.length == 0 || respuesta[0].length != CAMPOS_ESPERADOS) {
             return null;

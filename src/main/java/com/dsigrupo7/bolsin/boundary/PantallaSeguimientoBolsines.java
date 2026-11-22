@@ -26,6 +26,7 @@ public class PantallaSeguimientoBolsines {
     private List<Integer> numerosBolsinSinUbicacion = new ArrayList<>();
     private boolean cuCancelado = false;
 
+    // Paso 1: el EB selecciona la opcion para consultar la ubicacion de uno o varios bolsines.
     @GetMapping("/")
     public String seleccOpcUbicarBolsines(Model model) {
         this.habilitarPantalla();
@@ -46,10 +47,12 @@ public class PantallaSeguimientoBolsines {
         gestorSeguimientoBolsines.consultarUbicacionDeBolsines();
     }
 
+    // A1: informa que no se encuentran bolsines en estado Enviado.
     public void informarNoHayBolsinesEnviados() {
         noHayBolsinesEnviados = true;
     }
 
+    // A3: informa los bolsines cuya ubicacion no pudo informar el GPS Tracker.
     public void informarBolsinesSinUbicacion(List<Integer> numerosBolsin) {
         for (Integer numeroBolsin : numerosBolsin) {
             if (!numerosBolsinSinUbicacion.contains(numeroBolsin)) {
@@ -58,10 +61,12 @@ public class PantallaSeguimientoBolsines {
         }
     }
 
+    // A2: informa que no se encuentra bolsin con el numero de precinto ingresado.
     public void informarPrecintoNoEncontrado(String numeroPrecinto) {
         precintoNoEncontrado = numeroPrecinto;
     }
 
+    // Paso 6: muestra sobre un mapa la posicion de los bolsines.
     public void mostrarPosicionDeBolsinesEnMapa(String mapa) {
         this.mapa = mapa != null ? mapa : "";
         this.habilitarMapa();
@@ -71,10 +76,12 @@ public class PantallaSeguimientoBolsines {
         mapaHabilitado = !mapa.isEmpty();
     }
 
+    // Paso 6: habilita la opcion de seleccionar un bolsin del mapa o filtrar.
     public void pedirSeleccionBolsin() {
         seleccionBolsinHabilitada = true;
     }
 
+    // Paso 7: el EB selecciona un bolsin del mapa.
     @GetMapping("/seleccion-bolsin")
     public String tomarSeleccionBolsin(
             @RequestParam(name = "numeroBolsin", required = false) Integer numeroBolsin,
@@ -90,6 +97,7 @@ public class PantallaSeguimientoBolsines {
         return "seguimiento-bolsines";
     }
 
+    // Paso 6 (opcion de filtrado): el EB filtra por CM destino y/o numero de precinto (puede derivar en A2).
     @GetMapping("/filtro-bolsin")
     public String tomarFiltroBolsin(
             @RequestParam(name = "cmDestino", required = false) String cmDestino,
@@ -106,10 +114,12 @@ public class PantallaSeguimientoBolsines {
         return "seguimiento-bolsines";
     }
 
+    // Paso 8: consulta si se desea enviar un correo electronico al GCM de la CM destino.
     public void solicitarEnvioCorreoElectronico() {
         envioCorreoSolicitado = true;
     }
 
+    // Paso 9: el EB confirma el envio del correo electronico; si no lo confirma, A5.
     @GetMapping("/confirmacion-envio-email")
     public String tomarConfirmacionEnvioEmail(
             @RequestParam(name = "confirmacion", required = false) Boolean confirmacion,
@@ -124,10 +134,12 @@ public class PantallaSeguimientoBolsines {
         return "seguimiento-bolsines";
     }
 
+    // Paso 11: informa la ejecucion exitosa del CU 31 "Notificar ubicacion de bolsin".
     public void mostrarEjecucionExitosaCU31() {
         ejecucionExitosaCU31 = true;
     }
 
+    // A4: el EB cancela la ejecucion del caso de uso.
     @GetMapping("/cancelar")
     public String tomarCancelacion(Model model) {
         cuCancelado = true;
@@ -150,6 +162,7 @@ public class PantallaSeguimientoBolsines {
     }
 
     private void mostrarPantalla(Model model) {
+        // Paso 2: muestra la CM del usuario logueado (a traves del empleado).
         model.addAttribute("empleado", gestorSeguimientoBolsines.getEmpleadoLogueado());
         model.addAttribute("mapa", mapaHabilitado ? mapa : "");
         model.addAttribute("seleccionBolsinHabilitada", seleccionBolsinHabilitada);

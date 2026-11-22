@@ -29,12 +29,24 @@ public class AdaptadorXtr4500l implements IAdaptadorGPSTracker {
             String respuesta = servicio.getBolsinLocation(API_KEY, numeroBolsin, codigoCMOrigen);
             return adaptar(respuesta);
         } catch (RestClientException | JacksonException e) {
-            // Bolsin unknown to the tracker, tracker unavailable or invalid JSON: no location (A3).
+            // A3: bolsin desconocido para el GPS Tracker, servicio no disponible o JSON invalido:
+            // no hay ubicacion para informar.
             return null;
         }
     }
 
-    // Converts the vendor JSON {"items":[{...}]} into the common type.
+    /**
+     * Adapta la respuesta de ServicioXtr4500l.getBolsinLocation() al tipo comun UbicacionBolsin.
+     *
+     * El modelo XTR-4500L devuelve un JSON en formato cadena de caracteres con un item por bolsin:
+     * {"items":[{"numeroBolsin":101,"latitud":-31.42,"longitud":-64.18,
+     *            "fechaHoraUltimaActualizacion":"2026-03-07T12:30"}]}
+     *
+     * 1. Si la cadena esta vacia no hay ubicacion (A3).
+     * 2. Deserializa el JSON en los records Respuesta/Item (Jackson convierte la fecha ISO a LocalDateTime).
+     * 3. Si no hay items no hay ubicacion (A3).
+     * 4. Toma el primer item (se consulta de a un bolsin) y copia sus campos a UbicacionBolsin.
+     */
     private UbicacionBolsin adaptar(String respuesta) {
         if (respuesta == null || respuesta.isBlank()) {
             return null;
