@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 import com.dsigrupo7.bolsin.boundary.InterfazMapa;
 import com.dsigrupo7.bolsin.boundary.PantallaSeguimientoBolsines;
 import com.dsigrupo7.bolsin.boundary.UbicacionBolsin;
-import com.dsigrupo7.bolsin.boundary.adaptadores.AdaptadorGPSTracker;
+import com.dsigrupo7.bolsin.boundary.adaptadores.IAdaptadorGPSTracker;
 import com.dsigrupo7.bolsin.entity.Bolsin;
 import com.dsigrupo7.bolsin.entity.ComisionMedica;
 import com.dsigrupo7.bolsin.entity.Empleado;
@@ -41,7 +41,7 @@ public class GestorSeguimientoBolsines {
     private GestorNotificarUbicacionBolsin gestorNotificarUbicacionBolsin;
 
     @Autowired
-    private AdaptadorGPSTracker adaptadorGPSTracker;
+    private IAdaptadorGPSTracker adaptadorGPSTracker;
 
     private Empleado empleadoLogueado;
     private ComisionMedica CMUsuarioLogueado;

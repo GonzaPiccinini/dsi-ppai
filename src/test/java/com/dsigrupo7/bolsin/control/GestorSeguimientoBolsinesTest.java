@@ -19,7 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.dsigrupo7.bolsin.boundary.PantallaSeguimientoBolsines;
 import com.dsigrupo7.bolsin.boundary.UbicacionBolsin;
-import com.dsigrupo7.bolsin.boundary.adaptadores.AdaptadorGPSTracker;
+import com.dsigrupo7.bolsin.boundary.adaptadores.IAdaptadorGPSTracker;
 import com.dsigrupo7.bolsin.entity.Bolsin;
 import com.dsigrupo7.bolsin.entity.CambioEstadoBolsin;
 import com.dsigrupo7.bolsin.entity.ComisionMedica;
@@ -50,7 +50,7 @@ class GestorSeguimientoBolsinesTest {
     private GestorNotificarUbicacionBolsin gestorNotificarUbicacionBolsin;
 
     @Mock
-    private AdaptadorGPSTracker adaptadorGPSTracker;
+    private IAdaptadorGPSTracker adaptadorGPSTracker;
 
     @InjectMocks
     private GestorSeguimientoBolsines gestor;

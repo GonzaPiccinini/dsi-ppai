@@ -8,7 +8,7 @@ import org.springframework.web.client.RestClientException;
 import com.dsigrupo7.bolsin.boundary.UbicacionBolsin;
 import com.dsigrupo7.bolsin.boundary.servicios.ServicioNavTrackQX7A;
 
-public class AdaptadorNavTrackQX7A implements AdaptadorGPSTracker {
+public class AdaptadorNavTrackQX7A implements IAdaptadorGPSTracker {
 
     private static final String API_KEY = "sk_nav_7b61d9e4c3a2485fae10c77d5b2f";
 

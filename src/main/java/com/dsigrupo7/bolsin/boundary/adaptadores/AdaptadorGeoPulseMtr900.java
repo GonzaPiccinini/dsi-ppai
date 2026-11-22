@@ -9,7 +9,7 @@ import com.dsigrupo7.bolsin.boundary.servicios.ServicioGeoPulseMtr900;
 
 import tools.jackson.core.JacksonException;
 
-public class AdaptadorGeoPulseMtr900 implements AdaptadorGPSTracker {
+public class AdaptadorGeoPulseMtr900 implements IAdaptadorGPSTracker {
 
     private static final String API_KEY = "sk_geo_f2d84a1c9e7345b8a6d1c3f0972e";
 

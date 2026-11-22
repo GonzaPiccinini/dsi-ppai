@@ -11,7 +11,7 @@ import com.dsigrupo7.bolsin.boundary.servicios.ServicioXtr4500l;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
 
-public class AdaptadorXtr4500l implements AdaptadorGPSTracker {
+public class AdaptadorXtr4500l implements IAdaptadorGPSTracker {
 
     private static final String API_KEY = "sk_xtr_9F3a7C21bE6d4A10f2c8e5b7d913";
 

@@ -2,7 +2,7 @@ package com.dsigrupo7.bolsin.boundary.adaptadores;
 
 import com.dsigrupo7.bolsin.boundary.UbicacionBolsin;
 
-public interface AdaptadorGPSTracker {
+public interface IAdaptadorGPSTracker {
 
     /**
      * Returns the current location of the bolsin, or {@code null} when the GPS Tracker
