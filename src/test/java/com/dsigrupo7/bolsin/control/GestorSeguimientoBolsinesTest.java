@@ -1,6 +1,8 @@
 package com.dsigrupo7.bolsin.control;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -188,12 +190,20 @@ class GestorSeguimientoBolsinesTest {
         LocalDateTime fecha = LocalDateTime.of(2026, 3, 7, 12, 30);
         when(adaptadorGPSTracker.obtenerUbicacionBolsin(101, "CM-CBA-01", "CM-ROS-02"))
                 .thenReturn(new Object[]{101, -31.4201, -64.1888, fecha});
-        when(gestorNotificarUbicacionBolsin.notificarUbicacionBolsin("gcm@rosario.com", 101, fecha, -31.4201, -64.1888))
+        when(gestorNotificarUbicacionBolsin.notificarUbicacionBolsin(eq("gcm@rosario.com"), any(LocalDateTime.class),
+                eq(101), eq(fecha), eq(-31.4201), eq(-64.1888)))
                 .thenReturn(true);
 
+        LocalDateTime antes = LocalDateTime.now();
         gestor.consultarUbicacionDeBolsines();
         gestor.tomarSeleccionBolsin(101);
         gestor.confirmarEnvioEmail(true);
+        LocalDateTime despues = LocalDateTime.now();
+
+        LocalDateTime fechaHoraNotificacion = gestor.getFechaHoraNotificacion();
+        assertThat(fechaHoraNotificacion).isBetween(antes, despues);
+        verify(gestorNotificarUbicacionBolsin).notificarUbicacionBolsin("gcm@rosario.com", fechaHoraNotificacion,
+                101, fecha, -31.4201, -64.1888);
 
         assertThat(gestor.getEmailGCM()).isEqualTo("gcm@rosario.com");
         assertThat(gestor.getUbicacionNotificada()).containsExactly(101, -31.4201, -64.1888, fecha);

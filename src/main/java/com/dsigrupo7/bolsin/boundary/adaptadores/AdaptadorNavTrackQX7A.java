@@ -11,8 +11,6 @@ public class AdaptadorNavTrackQX7A implements IAdaptadorGPSTracker {
 
     private static final String API_KEY = "sk_nav_7b61d9e4c3a2485fae10c77d5b2f";
 
-    private static final int CAMPOS_ESPERADOS = 4;
-
     private final ServicioNavTrackQX7A servicio;
 
     public AdaptadorNavTrackQX7A(ServicioNavTrackQX7A servicio) {
@@ -51,7 +49,7 @@ public class AdaptadorNavTrackQX7A implements IAdaptadorGPSTracker {
             return null;
         }
         String[] campos = respuesta.strip().split("\\R")[0].split(",");
-        if (campos.length != CAMPOS_ESPERADOS) {
+        if (campos.length != 4) {
             return null;
         }
         return new Object[]{Integer.valueOf(campos[0].strip()),

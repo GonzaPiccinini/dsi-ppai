@@ -55,6 +55,7 @@ public class GestorSeguimientoBolsines {
     private ComisionMedica CMDestino;
     private String emailGCM;
     private Integer numeroBolsinSeleccionado;
+    private LocalDateTime fechaHora;
     private List<Object[]> ubicacionesAMostrar = new ArrayList<>();
     private List<String> comisionesMedicasDestino = new ArrayList<>();
     private List<String> numerosPrecinto = new ArrayList<>();
@@ -77,6 +78,7 @@ public class GestorSeguimientoBolsines {
         deseaEnviarEmail = null;
         envioEmailConfirmado = false;
         emailGCM = null;
+        fechaHora = null;
         ubicacionNotificada = null;
         posicionBolsin = new ArrayList<>();
         ubicacionesAMostrar = posicionBolsin;
@@ -125,6 +127,7 @@ public class GestorSeguimientoBolsines {
         deseaEnviarEmail = null;
         envioEmailConfirmado = false;
         emailGCM = null;
+        fechaHora = null;
         ubicacionNotificada = null;
         for (Bolsin bolsin : bolsinesEnviados) {
             if (bolsin.getNumeroBolsin() != null && bolsin.getNumeroBolsin().equals(numeroBolsinSeleccionado)) {
@@ -151,6 +154,7 @@ public class GestorSeguimientoBolsines {
         deseaEnviarEmail = confirmacion;
         envioEmailConfirmado = false;
         emailGCM = null;
+        fechaHora = null;
         ubicacionNotificada = null;
 
         if (Boolean.TRUE.equals(confirmacion) && bolsinSeleccionado != null) {
@@ -173,6 +177,7 @@ public class GestorSeguimientoBolsines {
         deseaEnviarEmail = null;
         envioEmailConfirmado = false;
         emailGCM = null;
+        fechaHora = null;
         ubicacionNotificada = null;
 
         List<Integer> numerosBolsinAMostrar = new ArrayList<>();
@@ -209,6 +214,7 @@ public class GestorSeguimientoBolsines {
         deseaEnviarEmail = null;
         envioEmailConfirmado = false;
         emailGCM = null;
+        fechaHora = null;
         ubicacionNotificada = null;
         ubicacionesAMostrar = new ArrayList<>();
         finCU();
@@ -284,8 +290,7 @@ public class GestorSeguimientoBolsines {
     private List<String> buscarComisionesMedicasDestino() {
         List<String> nombres = new ArrayList<>();
         for (Bolsin bolsin : bolsinesEnviados) {
-            ComisionMedica cmDestino = bolsin.obtenerCMDestino();
-            String nombre = cmDestino != null ? cmDestino.getNombre() : null;
+            String nombre = bolsin.obtenerCMDestino() != null ? bolsin.obtenerCMDestino().getNombre() : null;
             if (nombre != null && !nombres.contains(nombre)) {
                 nombres.add(nombre);
             }
@@ -329,8 +334,10 @@ public class GestorSeguimientoBolsines {
 
         // Paso 11: se incluye el CU 31 "Notificar ubicacion de bolsin" para informar numero de bolsin,
         // fecha y hora de ultima actualizacion y coordenadas del bolsin.
+        fechaHora = getFechaHora();
         boolean notificacionExitosa = gestorNotificarUbicacionBolsin.notificarUbicacionBolsin(
                 emailGCM,
+                fechaHora,
                 (Integer) ubicacion[0],
                 (LocalDateTime) ubicacion[3],
                 (Double) ubicacion[1],
@@ -365,6 +372,10 @@ public class GestorSeguimientoBolsines {
             }
         }
         return ubicacionBolsin;
+    }
+
+    private LocalDateTime getFechaHora() {
+        return LocalDateTime.now();
     }
 
     // Fin del caso de uso: se descarta la seleccion; para repetir el flujo se debe seleccionar otro bolsin.
@@ -423,6 +434,10 @@ public class GestorSeguimientoBolsines {
 
     public String getEmailGCM() {
         return emailGCM;
+    }
+
+    public LocalDateTime getFechaHoraNotificacion() {
+        return fechaHora;
     }
 
     public Object[] getUbicacionNotificada() {

@@ -12,8 +12,6 @@ public class AdaptadorGeoPulseMtr900 implements IAdaptadorGPSTracker {
 
     private static final String API_KEY = "sk_geo_f2d84a1c9e7345b8a6d1c3f0972e";
 
-    private static final int CAMPOS_ESPERADOS = 4;
-
     private final ServicioGeoPulseMtr900 servicio;
 
     public AdaptadorGeoPulseMtr900(ServicioGeoPulseMtr900 servicio) {
@@ -48,7 +46,7 @@ public class AdaptadorGeoPulseMtr900 implements IAdaptadorGPSTracker {
      *    que obtenerUbicacionBolsin() trata como A3.
      */
     private Object[] adaptar(Object[][] respuesta) {
-        if (respuesta == null || respuesta.length == 0 || respuesta[0].length != CAMPOS_ESPERADOS) {
+        if (respuesta == null || respuesta.length == 0 || respuesta[0].length != 4) {
             return null;
         }
         Object[] fila = respuesta[0];

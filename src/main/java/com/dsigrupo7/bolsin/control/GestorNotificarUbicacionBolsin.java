@@ -12,14 +12,15 @@ public class GestorNotificarUbicacionBolsin {
 
     private static final Logger log = LoggerFactory.getLogger(GestorNotificarUbicacionBolsin.class);
 
-    public boolean notificarUbicacionBolsin(String email, Integer numeroBolsin,
+    public boolean notificarUbicacionBolsin(String email, LocalDateTime fechaHora, Integer numeroBolsin,
             LocalDateTime fechaHoraUltimaActualizacion, Double latitud, Double longitud) {
         if (email == null || email.isBlank() || numeroBolsin == null) {
             return false;
         }
 
         String asunto = "Ubicacion del bolsin " + numeroBolsin;
-        String cuerpo = "Numero de bolsin: " + numeroBolsin + "\n"
+        String cuerpo = "Fecha y hora de notificacion: " + fechaHora + "\n"
+                + "Numero de bolsin: " + numeroBolsin + "\n"
                 + "Fecha y hora de ultima actualizacion: " + fechaHoraUltimaActualizacion + "\n"
                 + "Coordenadas: " + latitud + ", " + longitud;
 
