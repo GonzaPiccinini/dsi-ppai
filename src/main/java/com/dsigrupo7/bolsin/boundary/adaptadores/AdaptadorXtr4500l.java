@@ -5,7 +5,6 @@ import java.util.List;
 
 import org.springframework.web.client.RestClientException;
 
-import com.dsigrupo7.bolsin.boundary.UbicacionBolsin;
 import com.dsigrupo7.bolsin.boundary.servicios.ServicioXtr4500l;
 
 import tools.jackson.core.JacksonException;
@@ -24,7 +23,7 @@ public class AdaptadorXtr4500l implements IAdaptadorGPSTracker {
     }
 
     @Override
-    public UbicacionBolsin obtenerUbicacionBolsin(Integer numeroBolsin, String codigoCMOrigen, String codigoCMDestino) {
+    public Object[] obtenerUbicacionBolsin(Integer numeroBolsin, String codigoCMOrigen, String codigoCMDestino) {
         try {
             String respuesta = servicio.getBolsinLocation(API_KEY, numeroBolsin, codigoCMOrigen);
             return adaptar(respuesta);
@@ -36,7 +35,9 @@ public class AdaptadorXtr4500l implements IAdaptadorGPSTracker {
     }
 
     /**
-     * Adapta la respuesta de ServicioXtr4500l.getBolsinLocation() al tipo comun UbicacionBolsin.
+     * Adapta la respuesta de ServicioXtr4500l.getBolsinLocation() al tipo comun Object[]
+     * con indices fijos: [0] numero de bolsin (Integer), [1] latitud (Double), [2] longitud (Double)
+     * y [3] fecha y hora de la ultima actualizacion (LocalDateTime).
      *
      * El modelo XTR-4500L devuelve un JSON en formato cadena de caracteres con un item por bolsin:
      * {"items":[{"numeroBolsin":101,"latitud":-31.42,"longitud":-64.18,
@@ -45,9 +46,9 @@ public class AdaptadorXtr4500l implements IAdaptadorGPSTracker {
      * 1. Si la cadena esta vacia no hay ubicacion (A3).
      * 2. Deserializa el JSON en los records Respuesta/Item (Jackson convierte la fecha ISO a LocalDateTime).
      * 3. Si no hay items no hay ubicacion (A3).
-     * 4. Toma el primer item (se consulta de a un bolsin) y copia sus campos a UbicacionBolsin.
+     * 4. Toma el primer item (se consulta de a un bolsin) y copia sus campos al Object[] en ese orden.
      */
-    private UbicacionBolsin adaptar(String respuesta) {
+    private Object[] adaptar(String respuesta) {
         if (respuesta == null || respuesta.isBlank()) {
             return null;
         }
@@ -56,8 +57,8 @@ public class AdaptadorXtr4500l implements IAdaptadorGPSTracker {
             return null;
         }
         Item item = json.items().get(0);
-        return new UbicacionBolsin(item.numeroBolsin(), item.latitud(), item.longitud(),
-                item.fechaHoraUltimaActualizacion());
+        return new Object[]{item.numeroBolsin(), item.latitud(), item.longitud(),
+                item.fechaHoraUltimaActualizacion()};
     }
 
     public record Respuesta(List<Item> items) {

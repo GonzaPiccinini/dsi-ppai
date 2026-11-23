@@ -18,7 +18,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.dsigrupo7.bolsin.boundary.PantallaSeguimientoBolsines;
-import com.dsigrupo7.bolsin.boundary.UbicacionBolsin;
 import com.dsigrupo7.bolsin.boundary.adaptadores.IAdaptadorGPSTracker;
 import com.dsigrupo7.bolsin.entity.Bolsin;
 import com.dsigrupo7.bolsin.entity.CambioEstadoBolsin;
@@ -82,7 +81,7 @@ class GestorSeguimientoBolsinesTest {
         Bolsin deOtraCM = bolsin(103, cmRosario, cmCordoba, "ENVIADO");
         when(bolsinRepository.findAll()).thenReturn(List.of(enviado, noEnviado, deOtraCM));
 
-        UbicacionBolsin ubicacion = new UbicacionBolsin(101, -31.4201, -64.1888, LocalDateTime.of(2026, 3, 7, 12, 30));
+        Object[] ubicacion = new Object[]{101, -31.4201, -64.1888, LocalDateTime.of(2026, 3, 7, 12, 30)};
         when(adaptadorGPSTracker.obtenerUbicacionBolsin(101, "CM-CBA-01", "CM-ROS-02")).thenReturn(ubicacion);
 
         gestor.consultarUbicacionDeBolsines();
@@ -171,8 +170,8 @@ class GestorSeguimientoBolsinesTest {
         verifyNoInteractions(gestorNotificarUbicacionBolsin);
     }
 
-    private static UbicacionBolsin ubicacion101() {
-        return new UbicacionBolsin(101, -31.4201, -64.1888, LocalDateTime.of(2026, 3, 7, 12, 30));
+    private static Object[] ubicacion101() {
+        return new Object[]{101, -31.4201, -64.1888, LocalDateTime.of(2026, 3, 7, 12, 30)};
     }
 
     @Test
@@ -188,7 +187,7 @@ class GestorSeguimientoBolsinesTest {
         when(bolsinRepository.findAll()).thenReturn(List.of(bolsin(101, cmCordoba, cmRosario, "ENVIADO")));
         LocalDateTime fecha = LocalDateTime.of(2026, 3, 7, 12, 30);
         when(adaptadorGPSTracker.obtenerUbicacionBolsin(101, "CM-CBA-01", "CM-ROS-02"))
-                .thenReturn(new UbicacionBolsin(101, -31.4201, -64.1888, fecha));
+                .thenReturn(new Object[]{101, -31.4201, -64.1888, fecha});
         when(gestorNotificarUbicacionBolsin.notificarUbicacionBolsin("gcm@rosario.com", 101, fecha, -31.4201, -64.1888))
                 .thenReturn(true);
 
@@ -197,7 +196,7 @@ class GestorSeguimientoBolsinesTest {
         gestor.confirmarEnvioEmail(true);
 
         assertThat(gestor.getEmailGCM()).isEqualTo("gcm@rosario.com");
-        assertThat(gestor.getUbicacionNotificada().numeroBolsin()).isEqualTo(101);
+        assertThat(gestor.getUbicacionNotificada()).containsExactly(101, -31.4201, -64.1888, fecha);
         verify(pantallaSeguimientoBolsines).mostrarEjecucionExitosaCU31();
     }
 

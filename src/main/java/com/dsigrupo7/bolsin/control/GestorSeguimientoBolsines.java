@@ -1,5 +1,6 @@
 package com.dsigrupo7.bolsin.control;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -9,7 +10,6 @@ import org.springframework.stereotype.Service;
 
 import com.dsigrupo7.bolsin.boundary.InterfazMapa;
 import com.dsigrupo7.bolsin.boundary.PantallaSeguimientoBolsines;
-import com.dsigrupo7.bolsin.boundary.UbicacionBolsin;
 import com.dsigrupo7.bolsin.boundary.adaptadores.IAdaptadorGPSTracker;
 import com.dsigrupo7.bolsin.entity.Bolsin;
 import com.dsigrupo7.bolsin.entity.ComisionMedica;
@@ -47,13 +47,15 @@ public class GestorSeguimientoBolsines {
     private List<Bolsin> bolsinesEnviados = new ArrayList<>();
     private List<Integer> numeroBolsinesEnviados = new ArrayList<>();
     private String codigoCMUsuarioLogueado;
-    private List<UbicacionBolsin> posicionBolsin = new ArrayList<>();
+    // Cada ubicacion es un Object[] con indices fijos: [0] numero de bolsin (Integer), [1] latitud (Double),
+    // [2] longitud (Double) y [3] fecha y hora de la ultima actualizacion (LocalDateTime).
+    private List<Object[]> posicionBolsin = new ArrayList<>();
     private List<Integer> numeroBolsinesSinUbicacion = new ArrayList<>();
     private Bolsin bolsinSeleccionado;
     private ComisionMedica CMDestino;
     private String emailGCM;
     private Integer numeroBolsinSeleccionado;
-    private List<UbicacionBolsin> ubicacionesAMostrar = new ArrayList<>();
+    private List<Object[]> ubicacionesAMostrar = new ArrayList<>();
     private List<String> comisionesMedicasDestino = new ArrayList<>();
     private List<String> numerosPrecinto = new ArrayList<>();
     private String mapa = "";
@@ -61,7 +63,7 @@ public class GestorSeguimientoBolsines {
     private String numeroPrecintoSeleccionado;
     private Boolean deseaEnviarEmail;
     private boolean envioEmailConfirmado;
-    private UbicacionBolsin ubicacionNotificada;
+    private Object[] ubicacionNotificada;
 
     // CU 36 - Consultar seguimiento de bolsines.
     // Se ejecuta despues del paso 1 (el EB selecciona la opcion para consultar la ubicacion de los bolsines).
@@ -187,8 +189,8 @@ public class GestorSeguimientoBolsines {
         }
 
         ubicacionesAMostrar = new ArrayList<>();
-        for (UbicacionBolsin ubicacion : posicionBolsin) {
-            if (numerosBolsinAMostrar.contains(ubicacion.numeroBolsin())) {
+        for (Object[] ubicacion : posicionBolsin) {
+            if (numerosBolsinAMostrar.contains((Integer) ubicacion[0])) {
                 ubicacionesAMostrar.add(ubicacion);
             }
         }
@@ -253,10 +255,10 @@ public class GestorSeguimientoBolsines {
 
     // Pasos 4 y 5: por cada bolsin enviado se pide la ubicacion al GPS Tracker. El Gestor solo conoce
     // a IAdaptadorGPSTracker (patron Adapter): el adaptador concreto traduce la llamada al endpoint del
-    // modelo y convierte su respuesta a UbicacionBolsin.
-    private List<UbicacionBolsin> obtenerDatosLocalizacionBolsines(List<Bolsin> bolsines) {
+    // modelo y convierte su respuesta a un Object[] (ver indices en posicionBolsin).
+    private List<Object[]> obtenerDatosLocalizacionBolsines(List<Bolsin> bolsines) {
         numeroBolsinesEnviados = new ArrayList<>();
-        List<UbicacionBolsin> ubicacionesBolsines = new ArrayList<>();
+        List<Object[]> ubicacionesBolsines = new ArrayList<>();
         for (Bolsin bolsin : bolsines) {
             Integer numeroBolsin = bolsin.getNumeroBolsin();
             numeroBolsinesEnviados.add(numeroBolsin);
@@ -265,7 +267,7 @@ public class GestorSeguimientoBolsines {
             String codigoCMDestino = cmDestino != null ? cmDestino.getCodigo() : null;
             // Paso 4: solicita al GPS Tracker los datos de localizacion (se envian la CM origen y la CM
             // destino porque cada modelo usa una u otra).
-            UbicacionBolsin ubicacionBolsin = adaptadorGPSTracker.obtenerUbicacionBolsin(numeroBolsin,
+            Object[] ubicacionBolsin = adaptadorGPSTracker.obtenerUbicacionBolsin(numeroBolsin,
                     codigoCMUsuarioLogueado, codigoCMDestino);
             // Paso 5: recibe los datos de localizacion del bolsin.
             if (ubicacionBolsin == null) {
@@ -320,7 +322,7 @@ public class GestorSeguimientoBolsines {
             return;
         }
 
-        UbicacionBolsin ubicacion = buscarUbicacionBolsinSeleccionado();
+        Object[] ubicacion = buscarUbicacionBolsinSeleccionado();
         if (ubicacion == null) {
             return;
         }
@@ -329,10 +331,10 @@ public class GestorSeguimientoBolsines {
         // fecha y hora de ultima actualizacion y coordenadas del bolsin.
         boolean notificacionExitosa = gestorNotificarUbicacionBolsin.notificarUbicacionBolsin(
                 emailGCM,
-                ubicacion.numeroBolsin(),
-                ubicacion.fechaHoraUltimaActualizacion(),
-                ubicacion.latitud(),
-                ubicacion.longitud());
+                (Integer) ubicacion[0],
+                (LocalDateTime) ubicacion[3],
+                (Double) ubicacion[1],
+                (Double) ubicacion[2]);
 
         if (notificacionExitosa) {
             ubicacionNotificada = ubicacion;
@@ -355,10 +357,10 @@ public class GestorSeguimientoBolsines {
         return email;
     }
 
-    private UbicacionBolsin buscarUbicacionBolsinSeleccionado() {
-        UbicacionBolsin ubicacionBolsin = null;
-        for (UbicacionBolsin ubicacion : posicionBolsin) {
-            if (ubicacion.numeroBolsin() != null && ubicacion.numeroBolsin().equals(bolsinSeleccionado.getNumeroBolsin())) {
+    private Object[] buscarUbicacionBolsinSeleccionado() {
+        Object[] ubicacionBolsin = null;
+        for (Object[] ubicacion : posicionBolsin) {
+            if (ubicacion[0] != null && ubicacion[0].equals(bolsinSeleccionado.getNumeroBolsin())) {
                 ubicacionBolsin = ubicacion;
             }
         }
@@ -423,7 +425,7 @@ public class GestorSeguimientoBolsines {
         return emailGCM;
     }
 
-    public UbicacionBolsin getUbicacionNotificada() {
+    public Object[] getUbicacionNotificada() {
         return ubicacionNotificada;
     }
 }

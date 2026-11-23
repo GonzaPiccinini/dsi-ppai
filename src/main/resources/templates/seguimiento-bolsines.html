@@ -370,11 +370,11 @@
                         <dd th:text="${emailGCMDestino}">gcm@bolsin.com</dd>
                         <th:block th:if="${ubicacionNotificada != null}">
                             <dt>Ultima actualizacion</dt>
-                            <dd th:text="${ubicacionNotificada.fechaHoraUltimaActualizacion != null
-                                    ? #temporals.format(ubicacionNotificada.fechaHoraUltimaActualizacion, 'dd/MM/yyyy HH:mm')
+                            <dd th:text="${ubicacionNotificada[3] != null
+                                    ? #temporals.format(ubicacionNotificada[3], 'dd/MM/yyyy HH:mm')
                                     : '-'}">-</dd>
                             <dt>Coordenadas</dt>
-                            <dd th:text="${ubicacionNotificada.latitud} + ', ' + ${ubicacionNotificada.longitud}">-</dd>
+                            <dd th:text="${ubicacionNotificada[1]} + ', ' + ${ubicacionNotificada[2]}">-</dd>
                         </th:block>
                     </dl>
                 </div>

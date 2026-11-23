@@ -14,7 +14,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.dsigrupo7.bolsin.boundary.UbicacionBolsin;
 import com.dsigrupo7.bolsin.boundary.servicios.ServicioGeoPulseMtr900;
 import com.dsigrupo7.bolsin.boundary.servicios.ServicioNavTrackQX7A;
 import com.dsigrupo7.bolsin.boundary.servicios.ServicioXtr4500l;
@@ -26,8 +25,9 @@ import com.sun.net.httpserver.HttpServer;
  */
 class AdaptadoresGPSTrackerTest {
 
-    private static final UbicacionBolsin ESPERADA =
-            new UbicacionBolsin(101, -31.4201, -64.1888, LocalDateTime.of(2026, 3, 7, 12, 30));
+    // Object[] con indices fijos: [0] numero de bolsin, [1] latitud, [2] longitud, [3] fecha y hora.
+    private static final Object[] ESPERADA =
+            {101, -31.4201, -64.1888, LocalDateTime.of(2026, 3, 7, 12, 30)};
 
     private HttpServer server;
 
@@ -66,9 +66,9 @@ class AdaptadoresGPSTrackerTest {
                 "{\"items\":[{\"numeroBolsin\":101,\"latitud\":-31.4201,\"longitud\":-64.1888,"
                         + "\"fechaHoraUltimaActualizacion\":\"2026-03-07T12:30:00\"}]}");
 
-        UbicacionBolsin ubicacion = new AdaptadorXtr4500l(new ServicioXtr4500l(baseUrl)).obtenerUbicacionBolsin(101, "CM-CBA-01", "CM-ROS-02");
+        Object[] ubicacion = new AdaptadorXtr4500l(new ServicioXtr4500l(baseUrl)).obtenerUbicacionBolsin(101, "CM-CBA-01", "CM-ROS-02");
 
-        assertThat(ubicacion).isEqualTo(ESPERADA);
+        assertThat(ubicacion).containsExactly(ESPERADA);
         assertThat(ultimaQuery.get("/api/xtr-4500l/getBolsinLocation")).contains("codigoComisionMedicaOrigen=CM-CBA-01");
     }
 
@@ -76,9 +76,9 @@ class AdaptadoresGPSTrackerTest {
     void navTrackQX7AAdaptaElTextoSeparadoPorComasYEnviaLaCMDestino() {
         respuestas.put("/api/navtrack-qx-7a/retrieveTrackingData", "101,-31.4201,-64.1888,2026-03-07T12:30");
 
-        UbicacionBolsin ubicacion = new AdaptadorNavTrackQX7A(new ServicioNavTrackQX7A(baseUrl)).obtenerUbicacionBolsin(101, "CM-CBA-01", "CM-ROS-02");
+        Object[] ubicacion = new AdaptadorNavTrackQX7A(new ServicioNavTrackQX7A(baseUrl)).obtenerUbicacionBolsin(101, "CM-CBA-01", "CM-ROS-02");
 
-        assertThat(ubicacion).isEqualTo(ESPERADA);
+        assertThat(ubicacion).containsExactly(ESPERADA);
         assertThat(ultimaQuery.get("/api/navtrack-qx-7a/retrieveTrackingData")).contains("codigoComisionMedicaDestino=CM-ROS-02");
     }
 
@@ -86,9 +86,9 @@ class AdaptadoresGPSTrackerTest {
     void geoPulseMtr900AdaptaLaMatriz() {
         respuestas.put("/api/geopulse-mtr-900/fetchCargoPositions", "[[101,-31.4201,-64.1888,\"2026-03-07T12:30:00\"]]");
 
-        UbicacionBolsin ubicacion = new AdaptadorGeoPulseMtr900(new ServicioGeoPulseMtr900(baseUrl)).obtenerUbicacionBolsin(101, "CM-CBA-01", "CM-ROS-02");
+        Object[] ubicacion = new AdaptadorGeoPulseMtr900(new ServicioGeoPulseMtr900(baseUrl)).obtenerUbicacionBolsin(101, "CM-CBA-01", "CM-ROS-02");
 
-        assertThat(ubicacion).isEqualTo(ESPERADA);
+        assertThat(ubicacion).containsExactly(ESPERADA);
     }
 
     @Test

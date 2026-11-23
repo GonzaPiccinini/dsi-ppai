@@ -4,7 +4,6 @@ import java.time.LocalDateTime;
 
 import org.springframework.web.client.RestClientException;
 
-import com.dsigrupo7.bolsin.boundary.UbicacionBolsin;
 import com.dsigrupo7.bolsin.boundary.servicios.ServicioGeoPulseMtr900;
 
 import tools.jackson.core.JacksonException;
@@ -22,7 +21,7 @@ public class AdaptadorGeoPulseMtr900 implements IAdaptadorGPSTracker {
     }
 
     @Override
-    public UbicacionBolsin obtenerUbicacionBolsin(Integer numeroBolsin, String codigoCMOrigen, String codigoCMDestino) {
+    public Object[] obtenerUbicacionBolsin(Integer numeroBolsin, String codigoCMOrigen, String codigoCMDestino) {
         try {
             Object[][] respuesta = servicio.fetchCargoPositions(API_KEY, numeroBolsin);
             return adaptar(respuesta);
@@ -34,7 +33,9 @@ public class AdaptadorGeoPulseMtr900 implements IAdaptadorGPSTracker {
     }
 
     /**
-     * Adapta la respuesta de ServicioGeoPulseMtr900.fetchCargoPositions() al tipo comun UbicacionBolsin.
+     * Adapta la respuesta de ServicioGeoPulseMtr900.fetchCargoPositions() al tipo comun Object[]
+     * con indices fijos: [0] numero de bolsin (Integer), [1] latitud (Double), [2] longitud (Double)
+     * y [3] fecha y hora de la ultima actualizacion (LocalDateTime).
      *
      * El modelo GeoPulse MTR-900 devuelve una matriz donde cada fila es un bolsin y cada columna un dato:
      * [[101, -31.4201, -64.1888, "2026-03-07T12:30"]]
@@ -46,14 +47,14 @@ public class AdaptadorGeoPulseMtr900 implements IAdaptadorGPSTracker {
      *    y la fecha se parsea desde String a LocalDateTime. Un tipo inesperado lanza una excepcion
      *    que obtenerUbicacionBolsin() trata como A3.
      */
-    private UbicacionBolsin adaptar(Object[][] respuesta) {
+    private Object[] adaptar(Object[][] respuesta) {
         if (respuesta == null || respuesta.length == 0 || respuesta[0].length != CAMPOS_ESPERADOS) {
             return null;
         }
         Object[] fila = respuesta[0];
-        return new UbicacionBolsin(((Number) fila[0]).intValue(),
+        return new Object[]{((Number) fila[0]).intValue(),
                 ((Number) fila[1]).doubleValue(),
                 ((Number) fila[2]).doubleValue(),
-                LocalDateTime.parse((String) fila[3]));
+                LocalDateTime.parse((String) fila[3])};
     }
 }

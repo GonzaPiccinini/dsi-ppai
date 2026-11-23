@@ -5,14 +5,16 @@ import java.util.stream.Collectors;
 
 public class InterfazMapa {
 
-    public String crearMapa(List<UbicacionBolsin> ubicaciones) {
+    // Cada ubicacion es un Object[] con indices fijos: [0] numero de bolsin, [1] latitud, [2] longitud
+    // y [3] fecha y hora de la ultima actualizacion.
+    public String crearMapa(List<Object[]> ubicaciones) {
         if (ubicaciones == null || ubicaciones.isEmpty()) {
             return "";
         }
 
         String marcadores = ubicaciones.stream()
-                .map(u -> "[" + u.numeroBolsin() + "," + u.latitud() + "," + u.longitud()
-                        + ",\"" + u.fechaHoraUltimaActualizacion() + "\"]")
+                .map(u -> "[" + u[0] + "," + u[1] + "," + u[2]
+                        + ",\"" + u[3] + "\"]")
                 .collect(Collectors.joining(","));
 
         return """
