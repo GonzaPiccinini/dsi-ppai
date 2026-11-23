@@ -13,11 +13,93 @@
             // Storage unavailable: nada que restaurar.
         }
     </script>
+    <script>
+        // El mapa lo crea InterfazMapa.java con una variable local, asi que no se puede alcanzar desde afuera.
+        // Se engancha un "init hook" de Leaflet en cuanto la libreria se define (window.L) para: (1) exponer
+        // la instancia como window.mapaSeguimiento y (2) recordar centro y zoom entre recargas de la pagina
+        // (clic en un bolsin, Si/No del correo). La vista guardada solo se reutiliza si los filtros son los
+        // mismos; si el filtro cambia, el mapa se encuadra de nuevo sobre los bolsines.
+        (function () {
+            var CLAVE_VISTA = 'seguimientoBolsines.mapaVista';
+
+            function claveFiltro() {
+                var cm = document.getElementById('cm-destino');
+                var precinto = document.getElementById('precinto');
+                return (cm ? cm.value : '') + '|' + (precinto ? precinto.value.trim() : '');
+            }
+
+            function leerVista(clave) {
+                try {
+                    var vista = JSON.parse(sessionStorage.getItem(CLAVE_VISTA));
+                    if (vista && vista.k === clave && vista.c && isFinite(vista.z)) {
+                        return vista;
+                    }
+                } catch (e) {
+                    // Sin storage o dato invalido: se usa la vista por defecto.
+                }
+                return null;
+            }
+
+            function instalar(Leaflet) {
+                if (!Leaflet || !Leaflet.Map || !Leaflet.Map.addInitHook || Leaflet.Map.__vistaGuardada) {
+                    return;
+                }
+                Leaflet.Map.__vistaGuardada = true;
+                Leaflet.Map.addInitHook(function () {
+                    var mapa = this;
+                    var clave = claveFiltro();
+                    var vista = leerVista(clave);
+                    window.mapaSeguimiento = mapa;
+
+                    if (vista) {
+                        // La primera llamada de InterfazMapa (fitBounds o setView) aplica la vista guardada.
+                        var aplicar = function () {
+                            delete mapa.setView;
+                            delete mapa.fitBounds;
+                            return Leaflet.Map.prototype.setView.call(mapa, vista.c, vista.z, { animate: false });
+                        };
+                        mapa.setView = aplicar;
+                        mapa.fitBounds = aplicar;
+                    }
+
+                    mapa.on('moveend', function () {
+                        try {
+                            var centro = mapa.getCenter();
+                            sessionStorage.setItem(CLAVE_VISTA, JSON.stringify({
+                                k: clave, c: [centro.lat, centro.lng], z: mapa.getZoom()
+                            }));
+                        } catch (e) {
+                            // Sin storage: no se recuerda la vista.
+                        }
+                    });
+                });
+            }
+
+            var valor = window.L;
+            if (valor) {
+                instalar(valor);
+                return;
+            }
+            try {
+                Object.defineProperty(window, 'L', {
+                    configurable: true,
+                    get: function () { return valor; },
+                    set: function (nuevo) {
+                        valor = nuevo;
+                        instalar(nuevo);
+                    }
+                });
+            } catch (e) {
+                // Sin defineProperty: el mapa funciona igual, solo que no recuerda la vista.
+            }
+        })();
+    </script>
     <style>
         html.restaurando body { visibility: hidden; }
     </style>
     <meta charset="UTF-8">
     <title>Seguimiento de Bolsines</title>
+    <link rel="icon" type="image/png" th:href="@{/img/icono-favicon.png}" href="/img/icono-favicon.png">
     <style>
         :root {
             color-scheme: light dark;
@@ -430,6 +512,87 @@
                 0 16px 44px rgba(40, 50, 120, 0.16),
                 inset 0 1px 0 rgba(255, 255, 255, 0.95),
                 inset 0 0 30px rgba(255, 255, 255, 0.3);
+        }
+
+        /* Mapa maximizado: el marco de vidrio pasa a ocupar toda la ventana. */
+        .mapa-vidrio.mapa-maximizado {
+            position: fixed;
+            inset: 0;
+            z-index: 2000;
+            margin: 0;
+            padding: 0;
+            border: 0;
+            border-radius: 0;
+            box-shadow: none;
+        }
+
+        .mapa-vidrio.mapa-maximizado #mapa {
+            height: 100% !important;
+            border: 0 !important;
+            border-radius: 0 !important;
+        }
+
+        body.mapa-max-activo {
+            overflow: hidden;
+        }
+
+        /* Botones de maximizar y modo satelital (esquina inferior derecha del mapa). */
+        #mapa .mapa-controles {
+            display: flex;
+            margin: 0 14px 14px 0;
+        }
+
+        #mapa .mapa-controles a {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 38px;
+            height: 38px;
+            border-bottom: 0;
+            cursor: pointer;
+        }
+
+        #mapa .mapa-controles a + a {
+            border-left: 1px solid rgba(40, 50, 120, 0.12);
+        }
+
+        #mapa .mapa-controles a svg {
+            width: 20px;
+            height: 20px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        #mapa .mapa-controles a.activo {
+            background: #1a2bd0;
+            color: #fff;
+        }
+
+        /* En modo satelital se quita el filtro en escala de grises de los mosaicos. */
+        #mapa.mapa-satelite .leaflet-tile-pane {
+            filter: none;
+        }
+
+        /* Etiqueta que aparece al pasar el mouse sobre un bolsin. */
+        .leaflet-tooltip.tooltip-precinto {
+            padding: 6px 12px;
+            font: inherit;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #1a2bd0;
+            background: rgba(255, 255, 255, 0.82);
+            -webkit-backdrop-filter: blur(14px);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.9);
+            border-radius: 12px;
+            box-shadow: 0 8px 22px rgba(40, 50, 120, 0.22);
+        }
+
+        .leaflet-tooltip-top.tooltip-precinto::before {
+            border-top-color: rgba(255, 255, 255, 0.9);
         }
 
         .filtros select,
@@ -995,6 +1158,179 @@
                 L.Map.prototype.getMinZoom = function () {
                     return 4;
                 };
+            }
+        })();
+    </script>
+    <script th:inline="javascript">
+        // Etiqueta al pasar el mouse sobre un bolsin y botones de maximizar / modo satelital del mapa.
+        (function () {
+            var mapa = window.mapaSeguimiento;
+            var Leaflet = window.L;
+            var contenedor = document.getElementById('mapa');
+            if (!mapa || !Leaflet || !contenedor) {
+                return;
+            }
+            var marco = contenedor.parentNode;
+
+            // Numero de precinto conocido por numero de bolsin (la pagina solo informa el del bolsin seleccionado).
+            var precintos = {};
+            var numeroSeleccionado = /*[[${bolsinSeleccionado != null ? bolsinSeleccionado.numeroBolsin : null}]]*/ null;
+            var precintoSeleccionado = /*[[${bolsinSeleccionado != null ? bolsinSeleccionado.numeroPrecinto : null}]]*/ null;
+            if (numeroSeleccionado !== null && precintoSeleccionado) {
+                precintos[numeroSeleccionado] = precintoSeleccionado;
+            }
+
+            // Marcador del bolsin seleccionado: mismo punto con pulso que los demas, pero azul y un poco mas grande.
+            var svgSeleccionado = '<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44">'
+                + '<circle cx="22" cy="22" r="12" fill="#1a2bd0" fill-opacity="0.4">'
+                + '<animate attributeName="r" values="12;21;12" dur="2.4s" repeatCount="indefinite"/>'
+                + '<animate attributeName="fill-opacity" values="0.4;0;0.4" dur="2.4s" repeatCount="indefinite"/>'
+                + '</circle>'
+                + '<circle cx="22" cy="22" r="11" fill="#ffffff"/>'
+                + '<circle cx="22" cy="22" r="8" fill="#1a2bd0"/>'
+                + '<circle cx="22" cy="22" r="3" fill="#ffffff"/>'
+                + '</svg>';
+            var iconoSeleccionado = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgSeleccionado);
+
+            // Etiqueta: el numero de bolsin se toma del popup que InterfazMapa asocia a cada marcador.
+            mapa.eachLayer(function (capa) {
+                if (!(capa instanceof Leaflet.Marker) || !capa.getPopup()) {
+                    return;
+                }
+                // Al hacer clic el popup no debe desplazar el mapa: la vista se conserva tal cual al recargar.
+                capa.getPopup().options.autoPan = false;
+                var contenido = capa.getPopup().getContent();
+                var coincidencia = /Bolsin\s+(\d+)/.exec(contenido && contenido.textContent ? contenido.textContent : '');
+                if (!coincidencia) {
+                    return;
+                }
+                var numero = Number(coincidencia[1]);
+
+                // El bolsin seleccionado se resalta en azul (mismo azul que los botones del mapa) y queda al frente.
+                if (numeroSeleccionado !== null && numero === Number(numeroSeleccionado) && capa._icon) {
+                    capa._icon.src = iconoSeleccionado;
+                    capa.setZIndexOffset(1000);
+                }
+                var texto = precintos[numero] ? 'Precinto ' + precintos[numero] : 'Bolsín ' + numero;
+                capa.bindTooltip(texto, {
+                    direction: 'top',
+                    offset: [-16, 0],
+                    opacity: 1,
+                    className: 'tooltip-precinto'
+                });
+            });
+
+            // Modo satelital.
+            var CLAVE_SATELITE = 'seguimientoBolsines.mapaSatelite';
+            var capaBase = null;
+            mapa.eachLayer(function (capa) {
+                if (capa instanceof Leaflet.TileLayer) {
+                    capaBase = capa;
+                }
+            });
+            var capaSatelite = Leaflet.tileLayer(
+                'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                { maxZoom: 19, maxNativeZoom: 18 });
+            var satelital = false;
+
+            function ponerSatelital(activo) {
+                if (!capaBase || activo === satelital) {
+                    return;
+                }
+                satelital = activo;
+                if (activo) {
+                    mapa.removeLayer(capaBase);
+                    capaSatelite.addTo(mapa);
+                } else {
+                    mapa.removeLayer(capaSatelite);
+                    capaBase.addTo(mapa);
+                }
+                contenedor.classList.toggle('mapa-satelite', activo);
+                botonSatelite.classList.toggle('activo', activo);
+                botonSatelite.setAttribute('aria-pressed', String(activo));
+                try {
+                    sessionStorage.setItem(CLAVE_SATELITE, activo ? '1' : '0');
+                } catch (e) {
+                    // Sin storage: no se recuerda el modo.
+                }
+            }
+
+            // Mapa maximizado (el marco pasa a position: fixed; un hueco mantiene el alto en la pagina).
+            var hueco = null;
+            var maximizado = false;
+
+            function ponerMaximizado(activo) {
+                if (activo === maximizado) {
+                    return;
+                }
+                maximizado = activo;
+                if (activo) {
+                    hueco = document.createElement('div');
+                    hueco.style.height = marco.offsetHeight + 'px';
+                    hueco.style.marginTop = getComputedStyle(marco).marginTop;
+                    marco.parentNode.insertBefore(hueco, marco);
+                } else if (hueco) {
+                    hueco.remove();
+                    hueco = null;
+                }
+                marco.classList.toggle('mapa-maximizado', activo);
+                document.body.classList.toggle('mapa-max-activo', activo);
+                botonMaximizar.classList.toggle('activo', activo);
+                botonMaximizar.setAttribute('aria-pressed', String(activo));
+                botonMaximizar.title = activo ? 'Salir de pantalla completa' : 'Maximizar mapa';
+                mapa.invalidateSize();
+                setTimeout(function () { mapa.invalidateSize(); }, 200);
+            }
+
+            var iconoMaximizar = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
+            var iconoSatelite = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 3 8l9 5 9-5-9-5Z"/><path d="m3 13 9 5 9-5"/></svg>';
+
+            function crearBoton(contenedorBotones, icono, titulo, alHacerClic) {
+                var boton = Leaflet.DomUtil.create('a', '', contenedorBotones);
+                boton.href = '#';
+                boton.setAttribute('role', 'button');
+                boton.setAttribute('aria-label', titulo);
+                boton.setAttribute('aria-pressed', 'false');
+                boton.title = titulo;
+                boton.innerHTML = icono;
+                Leaflet.DomEvent.on(boton, 'click', function (evento) {
+                    Leaflet.DomEvent.preventDefault(evento);
+                    Leaflet.DomEvent.stopPropagation(evento);
+                    alHacerClic();
+                });
+                return boton;
+            }
+
+            var botonMaximizar;
+            var botonSatelite;
+            var Controles = Leaflet.Control.extend({
+                options: { position: 'bottomright' },
+                onAdd: function () {
+                    var div = Leaflet.DomUtil.create('div', 'leaflet-bar leaflet-control mapa-controles');
+                    botonSatelite = crearBoton(div, iconoSatelite, 'Modo satelital', function () {
+                        ponerSatelital(!satelital);
+                    });
+                    botonMaximizar = crearBoton(div, iconoMaximizar, 'Maximizar mapa', function () {
+                        ponerMaximizado(!maximizado);
+                    });
+                    Leaflet.DomEvent.disableClickPropagation(div);
+                    return div;
+                }
+            });
+            new Controles().addTo(mapa);
+
+            document.addEventListener('keydown', function (evento) {
+                if (evento.key === 'Escape' && maximizado) {
+                    ponerMaximizado(false);
+                }
+            });
+
+            try {
+                if (sessionStorage.getItem(CLAVE_SATELITE) === '1') {
+                    ponerSatelital(true);
+                }
+            } catch (e) {
+                // Sin storage: arranca en el mapa comun.
             }
         })();
     </script>
